@@ -15,7 +15,10 @@ import { copyFileSync, existsSync, readFileSync, readdirSync, rmSync, statSync, 
 import { join } from "node:path";
 
 const ROOT = new URL("..", import.meta.url).pathname;
-const RESULTS = join(ROOT, "out/payee-authorization-experiments.json");
+const SUITES = [
+  { script: "experiments/payee-authorization.ts", results: join(ROOT, "out/payee-authorization-experiments.json") },
+  { script: "experiments/executor.ts", results: join(ROOT, "out/executor-experiments.json") },
+];
 
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((f) => {
@@ -24,17 +27,21 @@ function sources(dir: string): string[] {
   });
 }
 
-interface Scenario { id: string; guard: string | null; pass: boolean; got: { verdict: string; reasons: string[] } }
+interface Scenario { id: string; guard: string | null; pass: boolean; got: unknown }
 
 function runExperiments(): Scenario[] | null {
-  rmSync(RESULTS, { force: true });
-  try {
-    execFileSync(join(ROOT, "node_modules/.bin/tsx"), ["experiments/payee-authorization.ts"], { cwd: ROOT, stdio: "pipe" });
-  } catch {
-    // A failing scenario exits 1 by design. Whether the run happened at all is decided by the file.
+  const all: Scenario[] = [];
+  for (const suite of SUITES) {
+    rmSync(suite.results, { force: true });
+    try {
+      execFileSync(join(ROOT, "node_modules/.bin/tsx"), [suite.script], { cwd: ROOT, stdio: "pipe" });
+    } catch {
+      // A failing scenario exits 1 by design. Whether the run happened at all is decided by the file.
+    }
+    if (!existsSync(suite.results)) return null;
+    all.push(...(JSON.parse(readFileSync(suite.results, "utf8")) as Scenario[]));
   }
-  if (!existsSync(RESULTS)) return null;
-  return JSON.parse(readFileSync(RESULTS, "utf8")) as Scenario[];
+  return all;
 }
 
 const markers: Array<{ file: string; guard: string }> = [];
@@ -77,7 +84,7 @@ for (const { file, guard } of markers) {
     const target = results.filter((s) => s.guard === guard);
     const turned = target.filter((s) => !s.pass);
     if (turned.length === target.length && target.length > 0) {
-      console.log(`ok    ${guard}: ${turned.map((s) => `${s.id} now ${s.got.verdict}`).join("; ")}`);
+      console.log(`ok    ${guard}: ${turned.map((s) => `${s.id} now ${typeof s.got === "string" ? s.got : (s.got as { verdict: string }).verdict}`).join("; ")}`);
     } else {
       console.log(`FAIL  ${guard}: removing it changed nothing in ${target.filter((s) => s.pass).map((s) => s.id).join(", ")}`);
       bad++;
