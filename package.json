@@ -1,0 +1,22 @@
+{
+  "name": "agent3-purser",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Pre-payment payee checks and post-payment delivery checks for agents buying x402 services on Arc",
+  "scripts": {
+    "test": "node --import tsx --test test/*.test.ts",
+    "experiments": "tsx experiments/payee-authorization.ts"
+  },
+  "engines": {
+    "node": ">=20.18"
+  },
+  "dependencies": {
+    "viem": "^2.56.8"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.2",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}
