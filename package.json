@@ -5,8 +5,10 @@
   "type": "module",
   "description": "Pre-payment payee checks and post-payment delivery checks for agents buying x402 services on Arc",
   "scripts": {
-    "test": "node --import tsx --test test/*.test.ts",
-    "experiments": "tsx experiments/payee-authorization.ts"
+    "experiments:payee": "tsx experiments/payee-authorization.ts",
+    "experiments:executor": "tsx experiments/executor.ts",
+    "experiments": "tsx experiments/payee-authorization.ts && tsx experiments/executor.ts",
+    "mutation": "tsx scripts/mutation-check.ts"
   },
   "engines": {
     "node": ">=20.18"
