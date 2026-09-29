@@ -15,7 +15,23 @@ const GATEWAY = "0x0077777d7EBA4688BDeF3E311b846F25870A19B9";
 const MAX_AUTH_SECONDS = 7 * 24 * 60 * 60 + 100;
 type State = "reserved" | "signed" | "sent_unknown" | "server_ack_unverified";
 interface Journal { version: 1; orderId: string; day: string; amount: string; requestSha256: string; quoteSha256: string;
-  state: State; paymentHeader?: string; responseStatus?: number; settlement?: unknown; }
+  state: State; payeeVerdict?: "confirmed" | "unconfirmed"; payeeReasons?: string[];
+  unconfirmedPayeeException?: UnconfirmedPayeeException;
+  paymentHeader?: string; responseStatus?: number; settlement?: unknown; }
+/** An explicit, single-order human risk acceptance for a missing seller-domain authorization. */
+export interface UnconfirmedPayeeException {
+  exceptionId: string;
+  orderId: string;
+  quoteSha256: string;
+  requestSha256: string;
+  sellerHost: string;
+  payTo: Address;
+  amountAtomicUsdc: string;
+  /** Exact verifier reasons reviewed by the person approving this order. */
+  unconfirmedReasons: string[];
+  expiresAt: number;
+  reason: string;
+}
 export interface ApprovedGatewayOrder {
   orderId: string;
   quote: ObservedQuote;
@@ -32,6 +48,8 @@ export interface ApprovedGatewayOrder {
   journalDir: string;
   signer: LocalAccount;
   payeeVerification: Partial<VerifyOptions> & Pick<VerifyOptions, "ledger">;
+  /** No default exception. Rejected payee evidence can never be overridden. */
+  unconfirmedPayeeException?: UnconfirmedPayeeException;
 }
 export interface GatewayAttempt { state: "server_ack_unverified" | "sent_unknown"; status: number; settlement?: unknown;
   bodySha256: string; bodyText: string; }
@@ -60,6 +78,8 @@ export async function buyGatewayOnce(order: ApprovedGatewayOrder): Promise<Gatew
   const journalDir = order.journalDir;
   const signer = order.signer;
   const payeeVerification = { ...order.payeeVerification };
+  const exception = order.unconfirmedPayeeException ? { ...order.unconfirmedPayeeException } : undefined;
+  const exceptionSnapshot = JSON.stringify(exception);
   const quoteHeader = quote.paymentRequiredHeader;
   const quoteSha256 = quote.paymentRequiredSha256;
   const approvedQuoteSha256 = order.approvedQuoteSha256;
@@ -72,7 +92,8 @@ export async function buyGatewayOnce(order: ApprovedGatewayOrder): Promise<Gatew
     order.totalAtomicLimit === totalAtomicLimit && order.journalDir === journalDir && order.signer === signer &&
     order.approvedQuoteSha256 === approvedQuoteSha256 && order.approvedRequestSha256 === approvedRequestSha256 &&
     order.quote === quote && quote.paymentRequiredHeader === quoteHeader && quote.paymentRequiredSha256 === quoteSha256 &&
-    sha256(JSON.stringify(quote.request)) === requestSha256;
+    sha256(JSON.stringify(quote.request)) === requestSha256 &&
+    JSON.stringify(order.unconfirmedPayeeException) === exceptionSnapshot;
   const now = Math.floor(Date.now() / 1000);
   if (Math.abs(now - Math.floor(Date.parse(quote.observedAt) / 1000)) > 60) throw new Error("quote is stale");
   if (sha256(quoteHeader) !== quoteSha256 || quoteSha256 !== approvedQuoteSha256) throw new Error("quote changed since approval");
@@ -111,7 +132,21 @@ export async function buyGatewayOnce(order: ApprovedGatewayOrder): Promise<Gatew
   const checked = await verifyObservedQuote({ ...quote, request, paymentRequiredHeader: quoteHeader,
     paymentRequiredSha256: quoteSha256, offers: [offer] }, { ...payeeVerification, now });
   if (!inputUnchanged()) throw new Error("purchase inputs mutated during payee verification");
-  if (checked[0]?.verification.verdict !== "confirmed") throw new Error("payee authorization is not confirmed");
+  const payeeVerdict = checked[0]?.verification.verdict;
+  if (payeeVerdict === "rejected") throw new Error("rejected payee authorization cannot be overridden");
+  if (payeeVerdict === "unconfirmed") {
+    if (!exception || !/^[A-Za-z0-9_-]{1,80}$/.test(exception.exceptionId) ||
+      exception.orderId !== orderId || exception.quoteSha256 !== quoteSha256 ||
+      exception.requestSha256 !== requestSha256 || exception.sellerHost !== url.host ||
+      exception.payTo !== getAddress(selected.payTo as string) ||
+      exception.amountAtomicUsdc !== selected.amount ||
+      !Array.isArray(exception.unconfirmedReasons) ||
+      JSON.stringify(exception.unconfirmedReasons) !== JSON.stringify(checked[0].verification.reasons) ||
+      !Number.isSafeInteger(exception.expiresAt) || exception.expiresAt <= now || exception.expiresAt > now + 600 ||
+      typeof exception.reason !== "string" || exception.reason.trim().length < 12 || exception.reason.length > 500) {
+      throw new Error("unconfirmed payee requires an exact, short-lived human exception");
+    }
+  } else if (payeeVerdict !== "confirmed") throw new Error("payee authorization could not be verified");
 
   const day = new Date(now * 1000).toISOString().slice(0, 10);
   mkdirSync(journalDir, { recursive: true, mode: 0o700 });
@@ -132,12 +167,15 @@ export async function buyGatewayOnce(order: ApprovedGatewayOrder): Promise<Gatew
     if (used + amount > dailyAtomicLimit) throw new Error("daily budget exceeded");
     if (totalUsed + amount > totalAtomicLimit) throw new Error("lifetime budget exceeded");
     let journal: Journal = { version: 1, orderId, day, amount: amount.toString(),
-      requestSha256, quoteSha256, state: "reserved" };
+      requestSha256, quoteSha256, state: "reserved", payeeVerdict, payeeReasons: checked[0].verification.reasons,
+      unconfirmedPayeeException: payeeVerdict === "unconfirmed" ? exception : undefined };
     save(journalPath, journal); // reserve before any signature; crash means no automatic retry
-    const observation = checked[0].verification.observation;
-    const signedAuth = asObject(asObject(offer.extra).payeeAuthorization);
-    if (!observation || typeof signedAuth.sellerId !== "string") throw new Error("confirmed authorization lacked ledger observation");
-    payeeVerification.ledger.commit(observation, getAddress(signedAuth.sellerId));
+    if (payeeVerdict === "confirmed") {
+      const observation = checked[0].verification.observation;
+      const signedAuth = asObject(asObject(offer.extra).payeeAuthorization);
+      if (!observation || typeof signedAuth.sellerId !== "string") throw new Error("confirmed authorization lacked ledger observation");
+      payeeVerification.ledger.commit(observation, getAddress(signedAuth.sellerId));
+    }
     const scheme = new BatchEvmScheme(signer);
     const payload = await scheme.createPaymentPayload(2, selected as unknown as Parameters<typeof scheme.createPaymentPayload>[1]);
     const paymentHeader = Buffer.from(JSON.stringify({ ...payload, resource: root.resource, accepted: selected })).toString("base64");

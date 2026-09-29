@@ -108,10 +108,10 @@ try {
   await assert.rejects(buyGatewayOnce({ ...base, orderId: "bad-amount", maxAtomicAmount: 999n }), /approved Arc Gateway offer/);
   await assert.rejects(buyGatewayOnce({ ...base, orderId: "bad-request", approvedRequestSha256: "0".repeat(64) }), /request changed/);
   await assert.rejects(buyGatewayOnce({ ...base, orderId: "bad-payee", payeeVerification: { ledger: new PayeeLedger(join(dir, "bad-ledger.json")), now,
-    fetchIdentity: async () => null } }), /not confirmed/);
+    fetchIdentity: async () => null } }), /short-lived human exception/);
   await assert.rejects(buyGatewayOnce({ ...base, orderId: "expired-identity", payeeVerification: { ledger: new PayeeLedger(join(dir, "expired-ledger.json")),
     now: now - 3600, fetchIdentity: async () => identityDocument(host, [{ address: seller.address,
-      validAfter: now - 7200, validBefore: now - 1, status: "active" }]) } }), /not confirmed/);
+      validAfter: now - 7200, validBefore: now - 1, status: "active" }]) } }), /rejected payee authorization/);
   const expiredAuth = await signPayeeAuthorization(seller, { sellerDomain: host, network: "eip155:5042002",
     asset: "0x3600000000000000000000000000000000000000", payTo: payee, resourcePrefix: `http://${host}/`,
     validAfter: now - 7200, validBefore: now - 1, rotationSeq: 1 });
@@ -120,7 +120,7 @@ try {
   const expiredQuote = await fetchUnpaidQuote(quote.request);
   await assert.rejects(buyGatewayOnce({ ...base, orderId: "expired-auth", quote: expiredQuote,
     approvedQuoteSha256: expiredQuote.paymentRequiredSha256, payeeVerification: {
-      ...base.payeeVerification, now: now - 3600 } }), /not confirmed/);
+      ...base.payeeVerification, now: now - 3600 } }), /rejected payee authorization/);
   challenge = originalChallenge;
   assert.equal(paidCount, 0);
   const result = await buyGatewayOnce({ ...base, orderId: "purchase-1" });
@@ -146,8 +146,50 @@ try {
   await assert.rejects(buyGatewayOnce({ ...secondBase, orderId: "unknown-2" }), /same business request already attempted/);
   assert.equal(paidCount, 2);
   assert.equal(signCount, 2);
+  omitReceipt = false;
+  const unconfirmedOffer = { ...offer, extra: { name: "GatewayWalletBatched", version: "1",
+    verifyingContract: "0x0077777d7EBA4688BDeF3E311b846F25870A19B9" } };
+  challenge = Buffer.from(JSON.stringify({ x402Version: 2, resource: { url }, accepts: [unconfirmedOffer] })).toString("base64");
+  const exceptionQuote = await fetchUnpaidQuote({ ...quote.request, body: JSON.stringify({ task: "human exception test" }) });
+  const exceptionRequestSha256 = digest(JSON.stringify(exceptionQuote.request));
+  const exceptionBase = { ...base, orderId: "human-exception-1", quote: exceptionQuote,
+    dailyAtomicLimit: 3000n, totalAtomicLimit: 3000n,
+    approvedQuoteSha256: exceptionQuote.paymentRequiredSha256, approvedRequestSha256: exceptionRequestSha256,
+    payeeVerification: { ledger: new PayeeLedger(join(dir, "exception-ledger.json")), fetchIdentity: async () => null } };
+  const exception = { exceptionId: "approval-1", orderId: exceptionBase.orderId,
+    quoteSha256: exceptionQuote.paymentRequiredSha256, requestSha256: exceptionRequestSha256,
+    sellerHost: host, payTo: payee, amountAtomicUsdc: "1000", unconfirmedReasons: ["no_authorization"],
+    expiresAt: Math.floor(Date.now() / 1000) + 300,
+    reason: "One local test order accepted after manual review." };
+  await assert.rejects(buyGatewayOnce(exceptionBase), /short-lived human exception/);
+  await assert.rejects(buyGatewayOnce({ ...exceptionBase, unconfirmedPayeeException: { ...exception, amountAtomicUsdc: "2000" } }),
+    /short-lived human exception/);
+  await assert.rejects(buyGatewayOnce({ ...exceptionBase, unconfirmedPayeeException: { ...exception, unconfirmedReasons: ["identity_document_unreachable"] } }),
+    /short-lived human exception/);
+  assert.equal(paidCount, 2);
+  assert.equal(signCount, 2);
+  const exceptionResult = await buyGatewayOnce({ ...exceptionBase, unconfirmedPayeeException: exception });
+  assert.equal(exceptionResult.state, "server_ack_unverified");
+  assert.equal(paidCount, 3);
+  assert.equal(signCount, 3);
+  const exceptionJournal = JSON.parse(readFileSync(join(dir, "order-human-exception-1.json"), "utf8"));
+  assert.equal(exceptionJournal.payeeVerdict, "unconfirmed");
+  assert.deepEqual(exceptionJournal.payeeReasons, ["no_authorization"]);
+  assert.equal(exceptionJournal.unconfirmedPayeeException.exceptionId, "approval-1");
+  assert.equal(exceptionJournal.unconfirmedPayeeException.reason, exception.reason);
+  const tamperedPayee = "0x2222222222222222222222222222222222222222";
+  challenge = Buffer.from(JSON.stringify({ x402Version: 2, resource: { url }, accepts: [{ ...offer, payTo: tamperedPayee }] })).toString("base64");
+  const rejectedQuote = await fetchUnpaidQuote({ ...quote.request, body: JSON.stringify({ task: "rejected payee test" }) });
+  const rejectedRequestSha256 = digest(JSON.stringify(rejectedQuote.request));
+  await assert.rejects(buyGatewayOnce({ ...base, orderId: "rejected-exception", quote: rejectedQuote,
+    approvedPayTo: tamperedPayee, approvedQuoteSha256: rejectedQuote.paymentRequiredSha256,
+    approvedRequestSha256: rejectedRequestSha256,
+    unconfirmedPayeeException: { ...exception, orderId: "rejected-exception", quoteSha256: rejectedQuote.paymentRequiredSha256,
+      requestSha256: rejectedRequestSha256, payTo: tamperedPayee } }), /rejected payee authorization/);
+  assert.equal(paidCount, 3);
+  assert.equal(signCount, 3);
   for (const headers of [{ Authorization: "Bearer secret" }, { Cookie: "secret=1" }, { "x-api-key": "secret" }] as Record<string, string>[]) {
     await assert.rejects(fetchUnpaidQuote({ url, method: "GET", headers }), /not safe to persist/);
   }
-  console.log("PASS Gateway buyer: approved 402, confirmed payee, one send per order, unknown receipt hold, journal and credential guards");
+  console.log("PASS Gateway buyer: confirmed payee, exact unconfirmed exception, rejected payee override blocked, one send, unknown hold, journal and credential guards");
 } finally { server.close(); rmSync(dir, { recursive: true, force: true }); }
