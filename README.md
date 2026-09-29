@@ -42,7 +42,7 @@ Given a paid HTTP response and a versioned set of criteria, it records the respo
 
 **4. Purchasing proposal boundary** (`src/purchasing`)
 
-A workflow supplies a purchase need and independently verified offers. The model sees only eligible offers and proposes one offer ID. The boundary rejects a model choice outside that set, rechecks the offer and its exact terms at order creation, and copies payment fields from the verified offer rather than from model output. No eligible offer, model failure, or an invalid model choice causes an explicit defer decision. The append-only decision log can preserve these outcomes with `paymentEvidence: not_observed`. A baseline cheapest qualified offer and fixed-seller candidate are recorded for later comparison; neither is treated as an observed purchase. The current experiment uses synthetic quotes and a stub model, not a live model or third-party seller.
+A workflow supplies a purchase need and independently verified offers. The model sees isolated copies of eligible offers and proposes one offer ID with a reason. The reason is saved for review but never authorizes payment. Changes to either the model's copies or the caller's original offer terms cause a defer decision. The boundary also rejects a model choice outside the eligible set, rechecks the offer and its exact terms at order creation, and copies payment fields from the verified offer rather than from model output. No eligible offer, model failure, or an invalid model choice causes an explicit defer decision. The append-only decision log can preserve these outcomes with `paymentEvidence: not_observed`. A baseline cheapest qualified offer and fixed-seller candidate are recorded for later comparison; neither is treated as an observed purchase. The current experiment uses synthetic quotes and a stub model, not a live model or third-party seller.
 
 ## Run it
 
@@ -65,4 +65,4 @@ Results are written to `out/`.
 
 ## Where the project started
 
-Everything above was built before the event opened. The tag `tameion-start` marks that state; judges should count only work after it.
+The tag `tameion-start` marks the pre-event payee-authorization and execution-layer baseline. The delivery checker, rejected-payee regression fix, and purchasing proposal boundary were added after the event opened; judges can compare the tag with the current code to see that increment.

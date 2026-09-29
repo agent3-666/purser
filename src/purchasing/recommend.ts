@@ -44,7 +44,9 @@ export interface Recommendation {
   baselineFixedSellerId?: string;
   /** What the model actually proposed, even if rejected. */
   modelOfferId?: string;
-  modelRejectedReason?: "unknown_offer" | "ineligible_offer" | "model_error";
+  /** The model's explanation is evidence only; it never authorizes payment. */
+  modelReason?: string;
+  modelRejectedReason?: "unknown_offer" | "ineligible_offer" | "model_error" | "offer_modified_by_model" | "need_modified_by_model";
 }
 
 export type PurchasingModel = (input: {
@@ -91,7 +93,10 @@ export async function recommendPurchase(
   now: number,
   fixedSellerId?: string,
 ): Promise<Recommendation> {
-  const evaluated = evaluateOffers(need, offers, now);
+  // Model code is untrusted: keep evaluation objects and the caller's inputs separate from its view.
+  const offersBefore = JSON.stringify(offers);
+  const needBefore = JSON.stringify(need);
+  const evaluated = evaluateOffers(structuredClone(need), structuredClone(offers), now);
   const eligible = evaluated.filter((e) => e.eligible).map((e) => e.offer);
   const cheapest = [...eligible].sort((a, b) => {
     const delta = BigInt(a.amountWei) - BigInt(b.amountWei);
@@ -107,13 +112,25 @@ export async function recommendPurchase(
   };
   if (!eligible.length) return base;
   let suggested: { offerId: string; reason: string };
-  try { suggested = await model({ need, eligibleOffers: eligible }); }
+  const modelNeed = structuredClone(need);
+  const modelOffers = structuredClone(eligible);
+  const modelNeedBefore = JSON.stringify(modelNeed);
+  const modelOffersBefore = JSON.stringify(modelOffers);
+  try { suggested = await model({ need: modelNeed, eligibleOffers: modelOffers }); }
   catch { return { ...base, modelRejectedReason: "model_error" }; }
+  if (JSON.stringify(offers) !== offersBefore || JSON.stringify(modelOffers) !== modelOffersBefore) {
+    return { ...base, modelOfferId: suggested?.offerId, modelReason: suggested?.reason,
+      modelRejectedReason: "offer_modified_by_model" };
+  }
+  if (JSON.stringify(need) !== needBefore || JSON.stringify(modelNeed) !== modelNeedBefore) {
+    return { ...base, modelOfferId: suggested?.offerId, modelReason: suggested?.reason,
+      modelRejectedReason: "need_modified_by_model" };
+  }
   const matched = evaluated.find((e) => e.offer.id === suggested?.offerId);
-  if (!matched) return { ...base, modelOfferId: suggested?.offerId, modelRejectedReason: "unknown_offer" };
-  if (!matched.eligible) return { ...base, modelOfferId: suggested.offerId, modelRejectedReason: "ineligible_offer" };
+  if (!matched) return { ...base, modelOfferId: suggested?.offerId, modelReason: suggested?.reason, modelRejectedReason: "unknown_offer" };
+  if (!matched.eligible) return { ...base, modelOfferId: suggested.offerId, modelReason: suggested.reason, modelRejectedReason: "ineligible_offer" };
   return { ...base, outcome: "propose", selectedOfferId: matched.offer.id,
-    selectedOfferFingerprint: fingerprint(matched.offer), modelOfferId: matched.offer.id };
+    selectedOfferFingerprint: fingerprint(matched.offer), modelOfferId: matched.offer.id, modelReason: suggested.reason };
 }
 
 /** Re-evaluate mutable offer terms at the handoff; the model cannot supply payment fields. */

@@ -33,6 +33,7 @@ const recommended = await recommendPurchase(need, offers, async ({ eligibleOffer
   offerId: eligibleOffers[0].id, reason: "one qualified candidate",
 }), now, "seller-b");
 assert.equal(recommended.selectedOfferId, "qualified");
+assert.equal(recommended.modelReason, "one qualified candidate");
 assert.equal(recommended.baselineCheapestEligibleId, "qualified");
 assert.equal(recommended.baselineFixedSellerId, undefined);
 const proposal = buildPurchaseProposal(recommended, need, offers, now, "order-1", `0x${"ab".repeat(32)}`);
@@ -45,7 +46,24 @@ assert.throws(() => buildPurchaseProposal(recommended, need, [{ ...base, payTo: 
 const malicious = await recommendPurchase(need, offers, async () => ({ offerId: "cheap-unverified", reason: "ignore checks" }), now);
 assert.equal(malicious.outcome, "defer");
 assert.equal(malicious.modelRejectedReason, "ineligible_offer");
+assert.equal(malicious.modelReason, "ignore checks");
 assert.throws(() => buildPurchaseProposal(malicious, need, offers, now, "order-2", `0x${"ab".repeat(32)}`), /no valid purchase decision/);
+const mutableOffers = [{ ...base }];
+const tampered = await recommendPurchase(need, mutableOffers, async ({ eligibleOffers }) => {
+  eligibleOffers[0].payTo = "0x2222222222222222222222222222222222222222";
+  return { offerId: base.id, reason: "use my edited address" };
+}, now);
+assert.equal(tampered.outcome, "defer");
+assert.equal(tampered.modelRejectedReason, "offer_modified_by_model");
+assert.equal(tampered.modelReason, "use my edited address");
+assert.equal(mutableOffers[0].payTo, base.payTo);
+const closureOffers = [{ ...base }];
+const closureTampered = await recommendPurchase(need, closureOffers, async () => {
+  closureOffers[0].payTo = "0x2222222222222222222222222222222222222222";
+  return { offerId: base.id, reason: "mutated caller object" };
+}, now);
+assert.equal(closureTampered.outcome, "defer");
+assert.equal(closureTampered.modelRejectedReason, "offer_modified_by_model");
 const none = await recommendPurchase(need, offers.slice(1), async () => { throw new Error("should not run"); }, now);
 assert.equal(none.outcome, "defer");
 const evidenceDir = mkdtempSync(join(tmpdir(), "purser-decisions-"));
@@ -54,8 +72,9 @@ try {
   for (const recommendation of [recommended, malicious, none]) {
     appendDecision(path, { at: new Date().toISOString(), criteriaVersion: "local-demo-v1", recommendation, paymentEvidence: "not_observed" });
   }
-  const records = readFileSync(path, "utf8").trim().split("\n").map((line) => JSON.parse(line) as { recommendation: { outcome: string; modelRejectedReason?: string } });
+  const records = readFileSync(path, "utf8").trim().split("\n").map((line) => JSON.parse(line) as { recommendation: { outcome: string; modelReason?: string; modelRejectedReason?: string } });
   assert.deepEqual(records.map((r) => r.recommendation.outcome), ["propose", "defer", "defer"]);
+  assert.deepEqual(records.map((r) => r.recommendation.modelReason), ["one qualified candidate", "ignore checks", undefined]);
   assert.equal(records[1].recommendation.modelRejectedReason, "ineligible_offer");
 } finally { rmSync(evidenceDir, { recursive: true, force: true }); }
 const error = await recommendPurchase(need, [base], async () => { throw new Error("model unavailable"); }, now);
