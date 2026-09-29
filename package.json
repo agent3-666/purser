@@ -10,14 +10,18 @@
     "experiments:delivery": "tsx experiments/delivery.ts",
     "experiments:purchasing": "tsx experiments/purchasing.ts",
     "experiments:x402-quote": "tsx experiments/x402-quote.ts",
+    "experiments:gateway-buyer": "tsx experiments/gateway-buyer.ts",
     "experiments:arc-block": "tsx experiments/arc-block.ts",
-    "experiments": "tsx experiments/payee-authorization.ts && tsx experiments/executor.ts && tsx experiments/delivery.ts && tsx experiments/purchasing.ts && tsx experiments/x402-quote.ts && tsx experiments/arc-block.ts",
+    "experiments": "tsx experiments/payee-authorization.ts && tsx experiments/executor.ts && tsx experiments/delivery.ts && tsx experiments/purchasing.ts && tsx experiments/x402-quote.ts && tsx experiments/gateway-buyer.ts && tsx experiments/arc-block.ts",
     "mutation": "tsx scripts/mutation-check.ts"
   },
   "engines": {
     "node": ">=20.18"
   },
   "dependencies": {
+    "@circle-fin/x402-batching": "^3.5.0",
+    "@x402/core": "^2.27.0",
+    "@x402/evm": "^2.27.0",
     "viem": "^2.56.8"
   },
   "devDependencies": {

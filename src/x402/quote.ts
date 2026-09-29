@@ -61,8 +61,15 @@ export async function captureUnpaid402(request: UnpaidRequest): Promise<RawUnpai
   if (parsed.protocol !== "https:" && !(parsed.protocol === "http:" && ["localhost", "127.0.0.1"].includes(parsed.hostname))) {
     throw new Error("unpaid quote URL must use HTTPS or local HTTP");
   }
-  if (Object.keys(request.headers ?? {}).some((name) => /^(payment-signature|x-payment|x-payment-signature)$/i.test(name))) {
-    throw new Error("unpaid probe must not include a payment header");
+  // This request is returned to callers and may be saved as research evidence.
+  // Allow only public content-negotiation headers so credentials cannot leak into it.
+  for (const name of Object.keys(request.headers ?? {})) {
+    if (/^(payment-signature|x-payment|x-payment-signature)$/i.test(name)) {
+      throw new Error("unpaid probe must not include a payment header");
+    }
+    if (!/^(accept|content-type|user-agent)$/i.test(name)) {
+      throw new Error(`unpaid probe header is not safe to persist: ${name}`);
+    }
   }
   const response = await fetch(parsed, {
     method: request.method,

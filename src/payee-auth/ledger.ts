@@ -30,6 +30,8 @@ export function rotationKey(sellerId: Address, network: string, asset: Address):
 export class PayeeLedger {
   private state: LedgerState;
 
+  get isPersistent(): boolean { return this.path !== null; }
+
   constructor(private readonly path: string | null) {
     this.state = { version: 1, rotations: {}, nonces: {} };
     if (path && existsSync(path)) {

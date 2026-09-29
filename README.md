@@ -48,7 +48,11 @@ A workflow supplies a purchase need and independently verified offers. The model
 
 An unpaid GET or pre-agreed POST captures the exact `PAYMENT-REQUIRED` header and response body, then parses supported x402 v2 exact-EVM options. It requires HTTP 402 and binds `resource.url` to the requested URL as a Purser safety policy. This strict policy rejected two observed services whose challenge named a different URL; that observation alone is not a claim that those services violate x402. Each parsed offer is checked with `verifyPayee` against the seller domain's separately fetched identity document. A missing authorization remains `unconfirmed`; catalog presence does not upgrade it. The read path never sends `PAYMENT-SIGNATURE` or `X-PAYMENT`.
 
-`research/live_quotes_2026-09-29.json` retains three real unpaid 402 responses, including exact public wire headers and request bodies. QuickNode's Arc testnet option was quoted at 100 atomic USDC units (0.0001 USDC), but its route is `GatewayWalletBatched` and its payee verdict was `unconfirmed`. The local executor only models native transfers. `x402_http` offers are therefore ineligible for that executor even if a person later approves the payee. No testnet payment has occurred.
+`research/live_quotes_2026-09-29.json` retains three real unpaid 402 responses, including exact public wire headers and request bodies. QuickNode's Arc testnet option was quoted at 100 atomic USDC units (0.0001 USDC), but its route is `GatewayWalletBatched` and its payee verdict was `unconfirmed`. The local native-transfer executor still rejects `x402_http` offers. No testnet payment has occurred.
+
+**6. Isolated Gateway buyer experiment** (`src/x402/gateway-buyer.ts`)
+
+For a separately approved Arc testnet order, this adapter binds the original 402 and HTTP request, requires confirmed seller-domain authorization, enforces order/daily/lifetime caps, and uses Circle's batching SDK to sign and send one x402 v2 HTTP request. It journals the exact signed authorization locally and never automatically re-signs an unknown outcome. A seller's success receipt is marked `server_ack_unverified`: live Circle facilitator verification and Arc settlement remain untested. The Circle authorization remains valid for about seven days, so uncertain attempts continue to reserve budget. The local experiment verifies the received Gateway signature but does not move testnet funds. See [buyer integration](docs/buyer-integration.md).
 
 For a future Arc block-height purchase, `eval/criteria.v1.json` states the acceptance rule before any paid result. `src/delivery/arc-block.ts` checks a paid JSON-RPC block height against a separate Arc public RPC query. The validator is tested, but has not evaluated a paid response. See the [x402 Foundation HTTP transport spec](https://github.com/x402-foundation/x402/blob/main/specs/transports-v2/http.md) for the v2 wire headers.
 
@@ -63,6 +67,7 @@ npm run experiments:executor   # 20 scenarios on a local anvil chain
 npm run experiments:delivery   # objective response checks, no live paid call
 npm run experiments:purchasing # synthetic quotes, model-choice guard and defer records
 npm run experiments:x402-quote # local HTTP 402 header ingestion and payee verification
+npm run experiments:gateway-buyer # one local-only Gateway x402 HTTP attempt
 npm run experiments:arc-block  # objective Arc block-height comparison
 npm run mutation               # removes each of 20 guarded rules in turn
 ```
