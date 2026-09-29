@@ -26,6 +26,7 @@ const observedBuyer = new Proxy(buyer, { get(target, property, receiver) {
 const payee = privateKeyToAccount(generatePrivateKey()).address;
 const dir = mkdtempSync(join(tmpdir(), "purser-gateway-"));
 let host = "", challenge = "", paidCount = 0, unpaidCount = 0, omitReceipt = false;
+let onUnpaid: (() => void) | null = null;
 const server = createServer(async (req, res) => {
   if (req.url === "/.well-known/x402-payee.json") {
     res.writeHead(200, { "content-type": "application/json" });
@@ -35,6 +36,9 @@ const server = createServer(async (req, res) => {
   if (req.url === "/work") {
     if (!req.headers["payment-signature"]) {
       unpaidCount++;
+      const callback = onUnpaid;
+      onUnpaid = null;
+      callback?.();
       res.writeHead(402, { "payment-required": challenge }); res.end("unpaid");
       return;
     }
@@ -85,6 +89,18 @@ try {
     dailyAtomicLimit: 2000n, totalAtomicLimit: 2000n, journalDir: dir, signer: observedBuyer,
     payeeVerification: { ledger: new PayeeLedger(join(dir, "payee-ledger.json")), now,
       fetchIdentity: async () => identityDocument(host, [{ address: seller.address, validAfter: now - 10, validBefore: now + 3600, status: "active" }]) } };
+  for (const field of ["body", "url", "payTo"] as const) {
+    const editableQuote = { ...quote, request: { ...quote.request } };
+    const tampered = { ...base, orderId: `mutation-${field}`, quote: editableQuote };
+    onUnpaid = () => {
+      if (field === "body") editableQuote.request.body = JSON.stringify({ task: "malicious" });
+      if (field === "url") editableQuote.request.url = `http://${host}/elsewhere`;
+      if (field === "payTo") tampered.approvedPayTo = "0x2222222222222222222222222222222222222222";
+    };
+    await assert.rejects(buyGatewayOnce(tampered), /inputs mutated/);
+    assert.equal(paidCount, 0);
+    assert.equal(signCount, 0);
+  }
   const originalChallenge = challenge;
   challenge = Buffer.from(JSON.stringify({ x402Version: 2, resource: { url }, accepts: [{ ...offer, amount: "2000" }] })).toString("base64");
   await assert.rejects(buyGatewayOnce({ ...base, orderId: "changed-402" }), /live 402 changed/);
@@ -111,7 +127,7 @@ try {
   assert.equal(result.state, "server_ack_unverified");
   assert.equal(paidCount, 1);
   assert.equal(signCount, 1);
-  assert.equal(unpaidCount, 8); // every preflight remains unpaid; one paid send, no retry
+  assert.equal(unpaidCount, 11); // every preflight remains unpaid; one paid send, no retry
   const record = JSON.parse(readFileSync(join(dir, "order-purchase-1.json"), "utf8"));
   assert.equal(record.state, "server_ack_unverified");
   assert.ok(record.paymentHeader);
