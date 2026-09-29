@@ -125,6 +125,7 @@ export async function runExecutorExperiments(): Promise<ExecResult[]> {
       const need: PurchaseNeed = { id: "need-x1", resourceKind: "web_search", billingUnit: "per_request",
         requiredCapabilities: ["web_results"], maxAmountWei: parseEther("0.1").toString(), minimumOfferLifetimeSeconds: 30 };
       const offer: PurchaseOffer = { id: "quote-x1", sellerId: "local-seller", payTo: to,
+        paymentRoute: "local_native_transfer",
         resource: "http://seller.local/v1/search", resourceKind: "web_search", billingUnit: "per_request",
         capabilities: ["web_results"], amountWei: parseEther("0.1").toString(), validBefore: NOW() + 600,
         payeeVerdict: "confirmed" };
@@ -141,6 +142,7 @@ export async function runExecutorExperiments(): Promise<ExecResult[]> {
       const need: PurchaseNeed = { id: "need-x1b", resourceKind: "web_search", billingUnit: "per_request",
         requiredCapabilities: ["web_results"], maxAmountWei: parseEther("0.1").toString(), minimumOfferLifetimeSeconds: 30 };
       const good: PurchaseOffer = { id: "good-x1b", sellerId: "local-seller", payTo: to,
+        paymentRoute: "local_native_transfer",
         resource: "http://seller.local/v1/search", resourceKind: "web_search", billingUnit: "per_request",
         capabilities: ["web_results"], amountWei: parseEther("0.1").toString(), validBefore: NOW() + 600,
         payeeVerdict: "confirmed" };

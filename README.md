@@ -2,7 +2,7 @@
 
 Purser is a purchasing desk for agents that pay for x402 services. Before a payment it checks that the payout address in the offer is one the seller's own domain authorized, and it hands signing to an execution layer that enforces limits and never pays the same thing twice.
 
-The tag `tameion-start` holds the pre-event pieces. Event-period work now includes objective HTTP delivery checks and a purchasing-decision boundary. It filters quotes by service kind, billing unit, required capability, price, offer lifetime and payee verdict before accepting a model's choice. It records deferrals and rejected model choices. A live purchasing model, semantic review of what a paid call returned, and settlement on Arc are not connected yet.
+The tag `tameion-start` holds the pre-event pieces. Event-period work now includes objective HTTP delivery checks, a purchasing-decision boundary, and read-only ingestion of live x402 v2 HTTP 402 offers. The buyer boundary filters quotes by service kind, billing unit, required capability, price, offer lifetime and payee verdict before accepting a model's choice. It records deferrals and rejected model choices. A live purchasing model, semantic review of what a paid call returned, and x402 settlement on Arc are not connected yet.
 
 Built by Agent3 for the Tameion Agents Hackathon (Canteen × Circle), settling in USDC on Arc.
 
@@ -44,16 +44,26 @@ Given a paid HTTP response and a versioned set of criteria, it records the respo
 
 A workflow supplies a purchase need and independently verified offers. The model sees isolated copies of eligible offers and proposes one offer ID with a reason. The reason is saved for review but never authorizes payment. Changes to either the model's copies or the caller's original offer terms cause a defer decision. The boundary also rejects a model choice outside the eligible set, rechecks the offer and its exact terms at order creation, and copies payment fields from the verified offer rather than from model output. No eligible offer, model failure, or an invalid model choice causes an explicit defer decision. The append-only decision log can preserve these outcomes with `paymentEvidence: not_observed`. A baseline cheapest qualified offer and fixed-seller candidate are recorded for later comparison; neither is treated as an observed purchase. The current experiment uses synthetic quotes and a stub model, not a live model or third-party seller.
 
+**5. Live x402 quote read path** (`src/x402/quote.ts`)
+
+An unpaid GET or pre-agreed POST captures the exact `PAYMENT-REQUIRED` header and response body, then parses supported x402 v2 exact-EVM options. It requires HTTP 402 and binds `resource.url` to the requested URL as a Purser safety policy. This strict policy rejected two observed services whose challenge named a different URL; that observation alone is not a claim that those services violate x402. Each parsed offer is checked with `verifyPayee` against the seller domain's separately fetched identity document. A missing authorization remains `unconfirmed`; catalog presence does not upgrade it. The read path never sends `PAYMENT-SIGNATURE` or `X-PAYMENT`.
+
+`research/live_quotes_2026-09-29.json` retains three real unpaid 402 responses, including exact public wire headers and request bodies. QuickNode's Arc testnet option was quoted at 100 atomic USDC units (0.0001 USDC), but its route is `GatewayWalletBatched` and its payee verdict was `unconfirmed`. The local executor only models native transfers. `x402_http` offers are therefore ineligible for that executor even if a person later approves the payee. No testnet payment has occurred.
+
+For a future Arc block-height purchase, `eval/criteria.v1.json` states the acceptance rule before any paid result. `src/delivery/arc-block.ts` checks a paid JSON-RPC block height against a separate Arc public RPC query. The validator is tested, but has not evaluated a paid response. See the [x402 Foundation HTTP transport spec](https://github.com/x402-foundation/x402/blob/main/specs/transports-v2/http.md) for the v2 wire headers.
+
 ## Run it
 
 Needs Node 20.18+ and [Foundry](https://book.getfoundry.sh/) (for `anvil`).
 
 ```bash
 npm install
-npm run experiments:payee      # 17 scenarios against two real local HTTP sellers
+npm run experiments:payee      # 20 scenarios against two real local HTTP sellers
 npm run experiments:executor   # 20 scenarios on a local anvil chain
 npm run experiments:delivery   # objective response checks, no live paid call
 npm run experiments:purchasing # synthetic quotes, model-choice guard and defer records
+npm run experiments:x402-quote # local HTTP 402 header ingestion and payee verification
+npm run experiments:arc-block  # objective Arc block-height comparison
 npm run mutation               # removes each of 20 guarded rules in turn
 ```
 
@@ -61,8 +71,8 @@ The executor experiments measure "paid once" from outside the executor, using th
 
 Results are written to `out/`.
 
-**Evidence status:** The chain scenarios run on local Anvil, with its public test key. There is no Arc testnet transaction or third-party usage in this repository yet. The 2026-09-23 marketplace snapshot in `research/` is an unpaid read-only probe, not proof of a completed purchase. Local decisions and delivery checks are not traction.
+**Evidence status:** The chain scenarios run on local Anvil, with its public test key. There is no Arc testnet transaction or third-party usage in this repository yet. The 2026-09-23 marketplace snapshot and 2026-09-29 live quotes in `research/` are unpaid read-only probes, not proof of a completed purchase. Local decisions and delivery checks are not traction.
 
 ## Where the project started
 
-The tag `tameion-start` marks the pre-event payee-authorization and execution-layer baseline. The delivery checker, rejected-payee regression fix, and purchasing proposal boundary were added after the event opened; judges can compare the tag with the current code to see that increment.
+The tag `tameion-start` marks the pre-event payee-authorization and execution-layer baseline. The delivery checker, rejected-payee and identity-validity fixes, purchasing proposal boundary, and live read-only 402 ingestion were added after the event opened; judges can compare the tag with the current code to see that increment.

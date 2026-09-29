@@ -70,6 +70,26 @@ function decode(raw: unknown): { message: PayeeAuthorizationMessage; signature: 
   }
 }
 
+function validIdentityDocument(value: unknown): value is PayeeIdentityDocument {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const doc = value as Record<string, unknown>;
+  if (doc.version !== 1 || typeof doc.sellerDomain !== "string" || !Array.isArray(doc.identities)) return false;
+  const seen = new Set<string>();
+  for (const raw of doc.identities) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return false;
+    const entry = raw as Record<string, unknown>;
+    if (typeof entry.address !== "string" || !isAddress(entry.address) ||
+        typeof entry.validAfter !== "number" || !Number.isSafeInteger(entry.validAfter) ||
+        typeof entry.validBefore !== "number" || !Number.isSafeInteger(entry.validBefore) ||
+        entry.validAfter >= entry.validBefore ||
+        (entry.status !== "active" && entry.status !== "revoked")) return false;
+    const key = entry.address.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+  }
+  return true;
+}
+
 export async function verifyPayee(offer: OfferUnderCheck, opts: VerifyOptions): Promise<VerificationResult> {
   const now = BigInt(opts.now ?? Math.floor(Date.now() / 1000));
   const maxWindow = BigInt(opts.maxEphemeralWindowSeconds ?? 900);
@@ -130,16 +150,22 @@ export async function verifyPayee(offer: OfferUnderCheck, opts: VerifyOptions): 
   if (expired) hard.push("expired");
 
   // R3. The signer is published by the seller's own domain, fetched independently of the offer.
-  const doc = await opts.fetchIdentity(host);
+  const doc = await opts.fetchIdentity(host).catch(() => null);
   if (!doc) {
     soft.push("identity_document_unreachable");
+  } else if (!validIdentityDocument(doc)) {
+    hard.push("malformed_identity_document");
   } else {
     const entry = doc.identities.find((i) => i.address.toLowerCase() === m.sellerId.toLowerCase());
     const docForHost = doc.sellerDomain.toLowerCase() === host;
     let unpublished = false;
     unpublished = !entry || !docForHost; // GUARD:identity-published-by-domain
     if (unpublished) soft.push("identity_not_published");
-    else if (entry && entry.status === "revoked") hard.push("identity_revoked");
+    else if (entry) {
+      if (entry.status === "revoked") hard.push("identity_revoked");
+      if (now < BigInt(entry.validAfter)) hard.push("identity_not_yet_valid");
+      if (now >= BigInt(entry.validBefore)) hard.push("identity_expired");
+    }
   }
 
   // R7/R8. Change control: a rotation may only move forward, and a nonce may only be used once.

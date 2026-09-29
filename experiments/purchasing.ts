@@ -13,6 +13,7 @@ const need: PurchaseNeed = {
 const base: PurchaseOffer = {
   id: "qualified", sellerId: "seller-a", resource: "https://seller.example/search",
   payTo: "0x1111111111111111111111111111111111111111",
+  paymentRoute: "local_native_transfer",
   resourceKind: "web_search", billingUnit: "per_request", capabilities: ["web_results"],
   amountWei: "80", validBefore: now + 120, payeeVerdict: "confirmed",
 };
@@ -64,6 +65,10 @@ const closureTampered = await recommendPurchase(need, closureOffers, async () =>
 }, now);
 assert.equal(closureTampered.outcome, "defer");
 assert.equal(closureTampered.modelRejectedReason, "offer_modified_by_model");
+const liveX402 = await recommendPurchase(need, [{ ...base, paymentRoute: "x402_http" }],
+  async () => { throw new Error("must not be offered to model yet"); }, now);
+assert.equal(liveX402.outcome, "defer");
+assert.deepEqual(liveX402.evaluated[0].reasons, ["payment_route_unsupported"]);
 const none = await recommendPurchase(need, offers.slice(1), async () => { throw new Error("should not run"); }, now);
 assert.equal(none.outcome, "defer");
 const evidenceDir = mkdtempSync(join(tmpdir(), "purser-decisions-"));

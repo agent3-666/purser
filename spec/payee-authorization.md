@@ -61,7 +61,7 @@ Three outcomes, never "safe":
 | rule | rejects | guard |
 |---|---|---|
 | signature recovers to `sellerId` | forged claim of the seller's identity | `signature-matches-seller-id` |
-| `sellerId` is published, active, by the resource's own host | attacker's own key | `identity-published-by-domain` |
+| `sellerId` is published, active, and inside the identity entry's own validity window, by the resource's own host | attacker's own key, stale or premature key | `identity-published-by-domain`; E17–E18 |
 | `sellerDomain` equals the resource host | another seller's genuine authorization | `domain-bound-to-resource-host` |
 | resource URL starts with `resourcePrefix` | authorization for one path used on another | `resource-within-prefix` |
 | `network`, `asset`, `payTo` equal the offer | address rewritten in transit | `offer-matches-authorization` |

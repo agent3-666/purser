@@ -15,6 +15,8 @@ export interface PurchaseOffer {
   id: string;
   sellerId: string;
   payTo: Address;
+  /** The current executor models native transfer only; HTTP x402 needs its own payment adapter. */
+  paymentRoute: "local_native_transfer" | "x402_http";
   resource: string;
   resourceKind: string;
   billingUnit: string;
@@ -26,7 +28,7 @@ export interface PurchaseOffer {
 
 export type ExclusionReason =
   | "invalid_offer" | "wrong_resource_kind" | "different_billing_unit"
-  | "missing_capability" | "over_budget" | "offer_expiring" | "payee_not_confirmed";
+  | "missing_capability" | "over_budget" | "offer_expiring" | "payee_not_confirmed" | "payment_route_unsupported";
 
 export interface EvaluatedOffer {
   offer: PurchaseOffer;
@@ -81,6 +83,7 @@ export function evaluateOffers(need: PurchaseNeed, offers: PurchaseOffer[], now:
     if (price !== null && price > cap) reasons.push("over_budget");
     if (Number.isSafeInteger(offer.validBefore) && offer.validBefore - now < need.minimumOfferLifetimeSeconds) reasons.push("offer_expiring");
     if (offer.payeeVerdict !== "confirmed") reasons.push("payee_not_confirmed");
+    if (offer.paymentRoute !== "local_native_transfer") reasons.push("payment_route_unsupported");
     return { offer, eligible: reasons.length === 0, reasons };
   });
 }

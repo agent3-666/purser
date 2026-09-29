@@ -238,6 +238,15 @@ export async function runExperiments(): Promise<ScenarioResult[]> {
     const beforeRevoke = await fetchOffer(url);
     S.doc = identityDocument(S.host, [{ ...S.doc.identities[0], status: "revoked" }]);
     await check("E16", "seller has revoked the identity that signed", null, beforeRevoke, { verdict: "rejected", reason: "identity_revoked" });
+    S.doc = identityDocument(S.host, [{ address: S.identity.address, validAfter: 0, validBefore: NOW - 1, status: "active" }]);
+    await check("E17", "published identity key expired even though signature is fresh", null, beforeRevoke,
+      { verdict: "rejected", reason: "identity_expired" });
+    S.doc = identityDocument(S.host, [{ address: S.identity.address, validAfter: NOW + 1, validBefore: NOW + 3600, status: "active" }]);
+    await check("E18", "published identity key is not yet valid", null, beforeRevoke,
+      { verdict: "rejected", reason: "identity_not_yet_valid" });
+    S.doc = { version: 1, sellerDomain: S.host, identities: null } as unknown as PayeeIdentityDocument;
+    await check("E19", "malformed identity document is rejected without throwing", null, beforeRevoke,
+      { verdict: "rejected", reason: "malformed_identity_document" });
   } finally {
     S.server.close();
     T.server.close();

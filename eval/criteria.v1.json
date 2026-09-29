@@ -1,0 +1,27 @@
+{
+  "version": "2026-09-29-v1",
+  "status": "prospective; no paid result reviewed yet",
+  "tasks": {
+    "arc_block_height": {
+      "purpose": "Agent3 Purser checks Arc testnet chain freshness before making an onchain decision",
+      "request": { "method": "POST", "url": "https://x402.quicknode.com/arc-testnet", "jsonrpcMethod": "eth_blockNumber" },
+      "maxPriceAtomicUsdc": "1000",
+      "objectiveDelivery": { "httpStatus": 200, "contentType": "application/json", "maxLatencyMs": 10000, "requiredJsonPaths": ["result"] },
+      "independentReference": "https://rpc.testnet.arc.network eth_blockNumber, queried immediately after delivery",
+      "acceptance": "paid result is a hex block height no more than 10 blocks behind and no more than 2 blocks ahead of independent Arc RPC",
+      "observedPaymentRoute": "GatewayWalletBatched",
+      "paymentRouteSupportedByPurser": false,
+      "paymentGate": "must match request URL and have separately verified or explicitly human-approved payee; supported x402 payment route required"
+    },
+    "payee_risk_memo": {
+      "purpose": "Agent3 Purser reviews a live model's explanation of catalog versus x402 payee mismatch",
+      "request": { "method": "POST", "url": "https://api.guardagent.org/api/infer" },
+      "maxPriceAtomicUsdc": "1000",
+      "objectiveDelivery": { "httpStatus": 200, "contentType": "application/json", "maxLatencyMs": 20000, "requiredJsonPaths": ["response"] },
+      "semanticReview": "a separate reviewer must check two concrete risks and an explicit distinction between observation and possible cause; human samples the result",
+      "observedPaymentRoute": "GatewayWalletBatched",
+      "paymentRouteSupportedByPurser": false,
+      "paymentGate": "same strict request binding, payee approval and supported x402 route requirements"
+    }
+  }
+}

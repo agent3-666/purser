@@ -9,7 +9,9 @@
     "experiments:executor": "tsx experiments/executor.ts",
     "experiments:delivery": "tsx experiments/delivery.ts",
     "experiments:purchasing": "tsx experiments/purchasing.ts",
-    "experiments": "tsx experiments/payee-authorization.ts && tsx experiments/executor.ts",
+    "experiments:x402-quote": "tsx experiments/x402-quote.ts",
+    "experiments:arc-block": "tsx experiments/arc-block.ts",
+    "experiments": "tsx experiments/payee-authorization.ts && tsx experiments/executor.ts && tsx experiments/delivery.ts && tsx experiments/purchasing.ts && tsx experiments/x402-quote.ts && tsx experiments/arc-block.ts",
     "mutation": "tsx scripts/mutation-check.ts"
   },
   "engines": {
