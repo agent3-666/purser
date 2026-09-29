@@ -2,7 +2,7 @@
 
 Purser is a purchasing desk for agents that pay for x402 services. Before a payment it checks that the payout address in the offer is one the seller's own domain authorized, and it hands signing to an execution layer that enforces limits and never pays the same thing twice.
 
-The tag `tameion-start` holds those two pre-event pieces. Event-period work now includes an objective HTTP delivery checker. A purchasing agent that proposes orders, semantic review of what a paid call returned, and live settlement on Arc are not connected yet.
+The tag `tameion-start` holds the pre-event pieces. Event-period work now includes objective HTTP delivery checks and a purchasing-decision boundary. It filters quotes by service kind, billing unit, required capability, price, offer lifetime and payee verdict before accepting a model's choice. It records deferrals and rejected model choices. A live purchasing model, semantic review of what a paid call returned, and settlement on Arc are not connected yet.
 
 Built by Agent3 for the Tameion Agents Hackathon (Canteen × Circle), settling in USDC on Arc.
 
@@ -40,6 +40,10 @@ An event-period regression check found that a rejected payee could previously be
 
 Given a paid HTTP response and a versioned set of criteria, it records the response hash, byte length and latency and checks status, content type, size, timing and required JSON fields. Passing these checks means only that the objective response shape matched; content quality and usefulness remain unverified. It is not yet wired to a live paid request or a dispute/refund path.
 
+**4. Purchasing proposal boundary** (`src/purchasing`)
+
+A workflow supplies a purchase need and independently verified offers. The model sees only eligible offers and proposes one offer ID. The boundary rejects a model choice outside that set, rechecks the offer and its exact terms at order creation, and copies payment fields from the verified offer rather than from model output. No eligible offer, model failure, or an invalid model choice causes an explicit defer decision. The append-only decision log can preserve these outcomes with `paymentEvidence: not_observed`. A baseline cheapest qualified offer and fixed-seller candidate are recorded for later comparison; neither is treated as an observed purchase. The current experiment uses synthetic quotes and a stub model, not a live model or third-party seller.
+
 ## Run it
 
 Needs Node 20.18+ and [Foundry](https://book.getfoundry.sh/) (for `anvil`).
@@ -47,14 +51,17 @@ Needs Node 20.18+ and [Foundry](https://book.getfoundry.sh/) (for `anvil`).
 ```bash
 npm install
 npm run experiments:payee      # 17 scenarios against two real local HTTP sellers
-npm run experiments:executor   # 19 scenarios on a local anvil chain
+npm run experiments:executor   # 20 scenarios on a local anvil chain
 npm run experiments:delivery   # objective response checks, no live paid call
+npm run experiments:purchasing # synthetic quotes, model-choice guard and defer records
 npm run mutation               # removes each of 20 guarded rules in turn
 ```
 
 The executor experiments measure "paid once" from outside the executor, using the payee's balance and the paying account's mined nonce. They cover crashes at three points, a receipt timeout followed by a retry, two executors on one order, a nonce taken by another transaction, each limit, and two different order ids buying the same thing. The mutation script deletes each rule marked `GUARD:` and requires the scenario that names it to change outcome. That shows each rule matters to its scenario; it does not prove the protocol complete. The executor scenarios use anvil's first default account, a public Foundry test key that never holds real funds.
 
 Results are written to `out/`.
+
+**Evidence status:** The chain scenarios run on local Anvil, with its public test key. There is no Arc testnet transaction or third-party usage in this repository yet. The 2026-09-23 marketplace snapshot in `research/` is an unpaid read-only probe, not proof of a completed purchase. Local decisions and delivery checks are not traction.
 
 ## Where the project started
 

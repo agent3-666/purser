@@ -12,6 +12,7 @@
  */
 
 import { spawn, type ChildProcess } from "node:child_process";
+import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -19,6 +20,7 @@ import { createPublicClient, createWalletClient, defineChain, http, parseEther, 
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { CrashForTest, Executor, type CrashPoint, type ExecutorOptions, type Policy } from "../src/executor/executor.js";
 import { Journal, type OrderState } from "../src/executor/journal.js";
+import { buildPurchaseProposal, recommendPurchase, type PurchaseNeed, type PurchaseOffer } from "../src/purchasing/recommend.js";
 
 // anvil's first default account. A public test key; it never holds anything real.
 const ANVIL_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
@@ -120,8 +122,37 @@ export async function runExecutorExperiments(): Promise<ExecResult[]> {
     // X1 normal path
     {
       const ex = fresh(); const to = payee();
-      const m = await measure(to, async () => { ex.propose(order("x1", to)); return ex.execute("x1"); });
-      record("X1", "normal purchase", null, "paid exactly once / settled", `${once(m)} / ${m.out.state}`);
+      const need: PurchaseNeed = { id: "need-x1", resourceKind: "web_search", billingUnit: "per_request",
+        requiredCapabilities: ["web_results"], maxAmountWei: parseEther("0.1").toString(), minimumOfferLifetimeSeconds: 30 };
+      const offer: PurchaseOffer = { id: "quote-x1", sellerId: "local-seller", payTo: to,
+        resource: "http://seller.local/v1/search", resourceKind: "web_search", billingUnit: "per_request",
+        capabilities: ["web_results"], amountWei: parseEther("0.1").toString(), validBefore: NOW() + 600,
+        payeeVerdict: "confirmed" };
+      const decision = await recommendPurchase(need, [offer], async () => ({ offerId: "quote-x1", reason: "only qualified quote" }), NOW());
+      const m = await measure(to, async () => {
+        ex.propose(buildPurchaseProposal(decision, need, [offer], NOW(), "x1", `0x${"00".repeat(32)}`));
+        return ex.execute("x1");
+      });
+      record("X1", "qualified model proposal reaches local-chain executor", null, "paid exactly once / settled", `${once(m)} / ${m.out.state}`);
+    }
+    // X1b a model that selects an excluded, cheap quote must not reach signing.
+    {
+      const ex = fresh(); const to = payee();
+      const need: PurchaseNeed = { id: "need-x1b", resourceKind: "web_search", billingUnit: "per_request",
+        requiredCapabilities: ["web_results"], maxAmountWei: parseEther("0.1").toString(), minimumOfferLifetimeSeconds: 30 };
+      const good: PurchaseOffer = { id: "good-x1b", sellerId: "local-seller", payTo: to,
+        resource: "http://seller.local/v1/search", resourceKind: "web_search", billingUnit: "per_request",
+        capabilities: ["web_results"], amountWei: parseEther("0.1").toString(), validBefore: NOW() + 600,
+        payeeVerdict: "confirmed" };
+      const bad: PurchaseOffer = { ...good, id: "bad-x1b", amountWei: "1", payeeVerdict: "rejected" };
+      const decision = await recommendPurchase(need, [good, bad], async () => ({ offerId: bad.id, reason: "cheapest" }), NOW());
+      const m = await measure(to, async () => {
+        assert.equal(decision.modelRejectedReason, "ineligible_offer");
+        assert.throws(() => ex.propose(buildPurchaseProposal(decision, need, [good, bad], NOW(), "x1b", `0x${"00".repeat(32)}`)), /no valid purchase decision/);
+        return false;
+      });
+      record("X1b", "rejected model choice cannot create a payable order", null,
+        "nothing sent / no order", `${m.received === 0n && m.sent === 0 ? "nothing sent" : "payment occurred"} / ${m.out ? "order exists" : "no order"}`);
     }
     // X2 crash after signing, before any broadcast; a new process recovers
     {
