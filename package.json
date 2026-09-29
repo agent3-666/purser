@@ -7,6 +7,7 @@
   "scripts": {
     "experiments:payee": "tsx experiments/payee-authorization.ts",
     "experiments:executor": "tsx experiments/executor.ts",
+    "experiments:delivery": "tsx experiments/delivery.ts",
     "experiments": "tsx experiments/payee-authorization.ts && tsx experiments/executor.ts",
     "mutation": "tsx scripts/mutation-check.ts"
   },

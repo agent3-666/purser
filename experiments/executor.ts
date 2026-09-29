@@ -17,7 +17,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createPublicClient, createWalletClient, defineChain, http, parseEther, type Address } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
-import { CrashForTest, Executor, type CrashPoint, type Policy } from "../src/executor/executor.js";
+import { CrashForTest, Executor, type CrashPoint, type ExecutorOptions, type Policy } from "../src/executor/executor.js";
 import { Journal, type OrderState } from "../src/executor/journal.js";
 
 // anvil's first default account. A public test key; it never holds anything real.
@@ -129,7 +129,7 @@ export async function runExecutorExperiments(): Promise<ExecResult[]> {
       const m = await measure(to, async () => {
         ex.propose(order("x2", to));
         await ex.execute("x2").catch((e) => { if (!(e instanceof CrashForTest)) throw e; });
-        const again = new Executor({ ...(ex as unknown as { o: never }).o, crashAt: undefined } as never);
+        const again = new Executor({ ...(ex as unknown as { o: ExecutorOptions }).o, crashAt: undefined });
         return (await again.recoverAll())[0];
       });
       record("X2", "crash after signing, recovered by a new process", null, "paid exactly once / settled", `${once(m)} / ${m.out?.state}`);
@@ -141,7 +141,7 @@ export async function runExecutorExperiments(): Promise<ExecResult[]> {
         ex.propose(order("x3", to));
         await ex.execute("x3").catch((e) => { if (!(e instanceof CrashForTest)) throw e; });
         await rpc("evm_mine");
-        const again = new Executor({ ...(ex as unknown as { o: never }).o, crashAt: undefined } as never);
+        const again = new Executor({ ...(ex as unknown as { o: ExecutorOptions }).o, crashAt: undefined });
         return (await again.recoverAll())[0] ?? again.execute("x3");
       });
       record("X3", "crash between broadcast and its record", "exec-persist-before-broadcast", "paid exactly once / settled", `${once(m)} / ${m.out?.state}`);
@@ -149,7 +149,7 @@ export async function runExecutorExperiments(): Promise<ExecResult[]> {
     // X4 two executors pick up the same order at the same moment
     {
       const ex = fresh(); const to = payee();
-      const twin = new Executor({ ...(ex as unknown as { o: never }).o } as never);
+      const twin = new Executor({ ...(ex as unknown as { o: ExecutorOptions }).o });
       const m = await measure(to, async () => {
         ex.propose(order("x4", to));
         const [a, b] = await Promise.all([ex.execute("x4"), twin.execute("x4")]);
@@ -206,7 +206,7 @@ export async function runExecutorExperiments(): Promise<ExecResult[]> {
         // Something else with the same key uses that nonce.
         await walletClient.sendTransaction({ to: payee(), value: 1n, chain, account });
         await rpc("evm_mine");
-        const again = new Executor({ ...(ex as unknown as { o: never }).o, crashAt: undefined } as never);
+        const again = new Executor({ ...(ex as unknown as { o: ExecutorOptions }).o, crashAt: undefined });
         return (await again.recoverAll())[0];
       });
       record("X6", "our nonce was used by another transaction", "exec-nonce-consumed-means-hold", "payee received 0 / held",
@@ -218,12 +218,36 @@ export async function runExecutorExperiments(): Promise<ExecResult[]> {
       const m = await measure(to, async () => { ex.propose(order("x7", to, "0.1", { verdict: "rejected" })); return ex.execute("x7"); });
       record("X7", "payee authorization rejected", "exec-payee-verdict", "nothing sent / held", `${m.sent === 0 ? "nothing sent" : "SENT"} / ${m.out.state}`);
     }
+    // X7b a rejected authorization must remain blocked even after a human tries to approve
+    {
+      const ex = fresh(); const to = payee();
+      const m = await measure(to, async () => {
+        ex.propose(order("x7b", to, "0.1", { verdict: "rejected" }));
+        await ex.execute("x7b");
+        ex.approveByHuman("x7b");
+        return ex.execute("x7b");
+      });
+      record("X7b", "a human cannot override a rejected payee authorization", null,
+        "nothing sent / held", `${m.sent === 0 ? "nothing sent" : "SENT"} / ${m.out.state}`);
+    }
     // X8 payee unconfirmed, then a human allowlists it
     {
       const to = payee();
       const ex = fresh(policy({ humanAllowlist: new Set([to.toLowerCase()]) }));
       const m = await measure(to, async () => { ex.propose(order("x8", to, "0.1", { verdict: "unconfirmed" })); return ex.execute("x8"); });
       record("X8", "payee unconfirmed but on the human allowlist", null, "paid exactly once / settled", `${once(m)} / ${m.out.state}`);
+    }
+    // X8b missing authorization can be explicitly accepted by a human for this order
+    {
+      const ex = fresh(); const to = payee();
+      const m = await measure(to, async () => {
+        ex.propose(order("x8b", to, "0.1", { verdict: "unconfirmed" }));
+        await ex.execute("x8b");
+        ex.approveByHuman("x8b");
+        return ex.execute("x8b");
+      });
+      record("X8b", "a human may approve an unconfirmed payee for one order", null,
+        "paid exactly once / settled", `${once(m)} / ${m.out.state}`);
     }
     // X9 over the order's own cap
     {

@@ -2,7 +2,7 @@
 
 Purser is a purchasing desk for agents that pay for x402 services. Before a payment it checks that the payout address in the offer is one the seller's own domain authorized, and it hands signing to an execution layer that enforces limits and never pays the same thing twice.
 
-This repository holds those two pieces as they stood before the event. The purchasing agent that proposes orders, the check of what a paid call returned, and live settlement on Arc are event-period work and are not here yet.
+The tag `tameion-start` holds those two pre-event pieces. Event-period work now includes an objective HTTP delivery checker. A purchasing agent that proposes orders, semantic review of what a paid call returned, and live settlement on Arc are not connected yet.
 
 Built by Agent3 for the Tameion Agents Hackathon (Canteen × Circle), settling in USDC on Arc.
 
@@ -34,6 +34,12 @@ The model can only write a purchase proposal. Before signing, the executor check
 
 The signed transaction is written to disk before it is broadcast. On recovery the executor never signs again: a receipt settles the order, a transaction still in the mempool waits, a nonce consumed by something else puts the order on hold for a person, and otherwise the same signed bytes are sent again. Resending those bytes cannot pay twice, because their nonce is fixed. This covers direct transfers; the Gateway path is not yet under the executor.
 
+An event-period regression check found that a rejected payee could previously be paid after a human approved the held order. Human approval now applies only when the payee evidence is missing (`unconfirmed`), never when it contradicts the offer (`rejected`).
+
+**3. Objective delivery check** (`src/delivery`)
+
+Given a paid HTTP response and a versioned set of criteria, it records the response hash, byte length and latency and checks status, content type, size, timing and required JSON fields. Passing these checks means only that the objective response shape matched; content quality and usefulness remain unverified. It is not yet wired to a live paid request or a dispute/refund path.
+
 ## Run it
 
 Needs Node 20.18+ and [Foundry](https://book.getfoundry.sh/) (for `anvil`).
@@ -41,7 +47,8 @@ Needs Node 20.18+ and [Foundry](https://book.getfoundry.sh/) (for `anvil`).
 ```bash
 npm install
 npm run experiments:payee      # 17 scenarios against two real local HTTP sellers
-npm run experiments:executor   # 17 scenarios on a local anvil chain
+npm run experiments:executor   # 19 scenarios on a local anvil chain
+npm run experiments:delivery   # objective response checks, no live paid call
 npm run mutation               # removes each of 20 guarded rules in turn
 ```
 

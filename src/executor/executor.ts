@@ -65,6 +65,8 @@ export class Executor {
   approveByHuman(id: string): void {
     const order = this.o.journal.get(id);
     if (!order || order.state !== "held" || order.signed) return; // never un-hold a signed order
+    // A human may accept missing evidence, not contradictory evidence or a breached spending limit.
+    if (order.payeeVerdict !== "unconfirmed") return;
     order.state = "approved";
     order.approvedBy = "human";
     this.o.journal.put(order, "approved by a human");
@@ -180,7 +182,7 @@ export class Executor {
 
       if (order.state === "approved") {
         const why = this.refusal(order);
-        if (why && !(order.approvedBy === "human" && why.startsWith("payee"))) {
+        if (why && !(order.approvedBy === "human" && order.payeeVerdict === "unconfirmed" && why === "payee unconfirmed")) {
           order.state = "failed";
           this.o.journal.put(order, `refused at signing: ${why}`);
           return order;
