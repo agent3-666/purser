@@ -11,6 +11,7 @@
       "acceptance": "paid result is a hex block height no more than 10 blocks behind and no more than 2 blocks ahead of independent Arc RPC",
       "observedPaymentRoute": "GatewayWalletBatched",
       "paymentRouteSupportedByPurser": false,
+      "paymentRouteStatus": "local Gateway experiment only; live payment blocked by unconfirmed payee and zero Gateway balance",
       "paymentGate": "must match request URL and have separately verified or explicitly human-approved payee; supported x402 payment route required"
     },
     "payee_risk_memo": {
@@ -21,6 +22,7 @@
       "semanticReview": "a separate reviewer must check two concrete risks and an explicit distinction between observation and possible cause; human samples the result",
       "observedPaymentRoute": "GatewayWalletBatched",
       "paymentRouteSupportedByPurser": false,
+      "paymentRouteStatus": "local Gateway adapter exists; live request is blocked by strict resource URL binding",
       "paymentGate": "same strict request binding, payee approval and supported x402 route requirements"
     }
   }

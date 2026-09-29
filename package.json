@@ -12,6 +12,7 @@
     "experiments:x402-quote": "tsx experiments/x402-quote.ts",
     "experiments:gateway-buyer": "tsx experiments/gateway-buyer.ts",
     "experiments:arc-block": "tsx experiments/arc-block.ts",
+    "preflight:gateway": "tsx scripts/gateway-readiness.ts",
     "experiments": "tsx experiments/payee-authorization.ts && tsx experiments/executor.ts && tsx experiments/delivery.ts && tsx experiments/purchasing.ts && tsx experiments/x402-quote.ts && tsx experiments/gateway-buyer.ts && tsx experiments/arc-block.ts",
     "mutation": "tsx scripts/mutation-check.ts"
   },

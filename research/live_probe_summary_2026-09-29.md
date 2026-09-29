@@ -4,7 +4,7 @@ All three requests were made **without** a payment header. The complete observed
 
 | Candidate / task | Observed Arc testnet quote | Purser payee verdict | Execution status |
 |---|---|---|---|
-| QuickNode Arc RPC: get block height | HTTP 402; `eip155:5042002`; 100 atomic USDC = 0.0001 USDC; `GatewayWalletBatched` | `unconfirmed`, no seller payee authorization in the observed offer | No Gateway x402 buyer adapter; local native-transfer executor must not be used |
+| QuickNode Arc RPC: get block height | HTTP 402; `eip155:5042002`; 100 atomic USDC = 0.0001 USDC; `GatewayWalletBatched` | `unconfirmed`, no seller payee authorization in the observed offer | A separate guarded Gateway buyer adapter now passes local experiments, but refuses this unconfirmed live payee; no actual purchase |
 | GuardAgent inference: risk memo for Purser | HTTP 402; Arc testnet; 1,000 atomic USDC = 0.001 USDC; `GatewayWalletBatched` | Not evaluated as a valid Purser quote because its challenge `resource.url` is `/` | Strict request-binding policy rejects it; no claim about protocol conformance |
 | AgentPay Arc whale data | HTTP 402; Arc testnet; 10,000 atomic USDC = 0.01 USDC | Not evaluated as a valid Purser quote because its challenge names `http://api.agentpay.bond/whales` while the request used HTTPS | Strict request-binding policy rejects it; no claim about protocol conformance |
 

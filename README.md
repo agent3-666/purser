@@ -2,7 +2,7 @@
 
 Purser is a purchasing desk for agents that pay for x402 services. Before a payment it checks that the payout address in the offer is one the seller's own domain authorized, and it hands signing to an execution layer that enforces limits and never pays the same thing twice.
 
-The tag `tameion-start` holds the pre-event pieces. Event-period work now includes objective HTTP delivery checks, a purchasing-decision boundary, and read-only ingestion of live x402 v2 HTTP 402 offers. The buyer boundary filters quotes by service kind, billing unit, required capability, price, offer lifetime and payee verdict before accepting a model's choice. It records deferrals and rejected model choices. A live purchasing model, semantic review of what a paid call returned, and x402 settlement on Arc are not connected yet.
+The tag `tameion-start` holds the pre-event pieces. Event-period work now includes objective HTTP delivery checks, a purchasing-decision boundary, read-only ingestion of live x402 v2 HTTP 402 offers, and a guarded local Gateway buyer experiment. The buyer boundary filters quotes by service kind, billing unit, required capability, price, offer lifetime and payee verdict before accepting a model's choice. It records deferrals and rejected model choices. A live purchasing model, semantic review of what a paid call returned, and verified x402 settlement on Arc are not connected yet.
 
 Built by Agent3 for the Tameion Agents Hackathon (Canteen × Circle), settling in USDC on Arc.
 
@@ -54,6 +54,8 @@ An unpaid GET or pre-agreed POST captures the exact `PAYMENT-REQUIRED` header an
 
 For a separately approved Arc testnet order, this adapter binds the original 402 and HTTP request, requires confirmed seller-domain authorization, enforces order/daily/lifetime caps, and uses Circle's batching SDK to sign and send one x402 v2 HTTP request. It journals the exact signed authorization locally and never automatically re-signs an unknown outcome. A seller's success receipt is marked `server_ack_unverified`: live Circle facilitator verification and Arc settlement remain untested. The Circle authorization remains valid for about seven days, so uncertain attempts continue to reserve budget. The local experiment verifies the received Gateway signature but does not move testnet funds. See [buyer integration](docs/buyer-integration.md).
 
+A read-only preflight checks the Agent3 wallet's ERC-20 balance, Gateway allowance, Gateway unified balance, and a fresh QuickNode 402. Its 2026-09-29 run found 5 testnet USDC in the wallet, zero allowance and zero Gateway balance, while QuickNode's 0.0001 USDC payee remained unconfirmed. None of these observations is a purchase or settlement.
+
 For a future Arc block-height purchase, `eval/criteria.v1.json` states the acceptance rule before any paid result. `src/delivery/arc-block.ts` checks a paid JSON-RPC block height against a separate Arc public RPC query. The validator is tested, but has not evaluated a paid response. See the [x402 Foundation HTTP transport spec](https://github.com/x402-foundation/x402/blob/main/specs/transports-v2/http.md) for the v2 wire headers.
 
 ## Run it
@@ -69,6 +71,7 @@ npm run experiments:purchasing # synthetic quotes, model-choice guard and defer 
 npm run experiments:x402-quote # local HTTP 402 header ingestion and payee verification
 npm run experiments:gateway-buyer # one local-only Gateway x402 HTTP attempt
 npm run experiments:arc-block  # objective Arc block-height comparison
+npm run preflight:gateway -- <public-Arc-wallet-address> # read-only live readiness check
 npm run mutation               # removes each of 20 guarded rules in turn
 ```
 
