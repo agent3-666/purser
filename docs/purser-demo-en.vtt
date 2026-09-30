@@ -1,0 +1,40 @@
+WEBVTT
+
+00:00.000 --> 00:04.800
+A paying agent reads an x402 offer
+and sends funds to the address it names.
+
+00:04.800 --> 00:08.400
+A chain receipt proves payment,
+but not seller authorization.
+
+00:12.000 --> 00:18.800
+In a read-only sweep of Circle’s marketplace, twenty listings
+from three sellers returned payout addresses different from the catalog.
+
+00:18.800 --> 00:22.800
+A difference is not fraud.
+It is a verification problem.
+
+00:24.000 --> 00:29.200
+Purser asks the seller to sign the address
+and publish an identity key on its own domain.
+
+00:29.200 --> 00:31.500
+The buyer checks that evidence before signing.
+
+00:36.000 --> 00:41.200
+Twenty authorization scenarios
+and twenty local-chain execution scenarios pass.
+
+00:41.200 --> 00:47.300
+The model can propose, but payment controls decide.
+These are local experiments, not Arc settlement.
+
+00:48.000 --> 00:53.400
+One QuickNode testnet call cost 0.0001 USDC.
+Its answer passed a public node check.
+
+00:53.400 --> 00:58.900
+The Arc batch confirms the debit and credit.
+Seller authorization remains unconfirmed: one human exception.

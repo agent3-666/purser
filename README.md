@@ -1,5 +1,7 @@
 # Purser
 
+[Interactive demo and 60-second video](https://agent3-666.github.io/purser/) · [Event-period code](https://github.com/agent3-666/purser/compare/tameion-start...main) · [Verified testnet settlement](docs/settlement-verification-20260930.md)
+
 Purser is a purchasing desk for agents that pay for x402 services. Before a payment it checks that the payout address in the offer is one the seller's own domain authorized, and it hands signing to an execution layer that enforces limits and blocks duplicate orders within its documented journal and recovery model.
 
 The tag `tameion-start` holds the pre-event pieces. Event-period work now includes objective HTTP delivery checks, a purchasing-decision boundary, live x402 v2 quote ingestion, and a guarded Gateway buyer. On 2026-09-30, one approved Arc testnet QuickNode request returned a valid block height and Circle Gateway debited 0.0001 test USDC. The seller's signed payee authorization remains unavailable. Circle's completed transfer record and an independently decoded successful Arc batch now show the exact 100-unit buyer debit and seller credit; see [settlement verification](docs/settlement-verification-20260930.md). A live purchasing model and semantic review are not connected yet. See the [paid trial record](research/quicknode_paid_trial_2026-09-30.md).
