@@ -5,3 +5,8 @@ node_modules/
 state/
 *.key
 out/
+
+# Raw research inputs stay in the private archive.
+research/catalog_*.json
+research/probe_results*.json
+research/live_quotes*.json
