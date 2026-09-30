@@ -1,6 +1,6 @@
 # QuickNode Arc testnet paid trial — 2026-09-30
 
-This is one user-authorized Agent3 Purser pilot order, not evidence of external buyer adoption or independent Arc settlement of the individual nanopayment.
+This is one user-authorized Agent3 Purser pilot order, not evidence of external buyer adoption. The initial observations below were followed by a read-only settlement verification on the same date.
 
 - Task: one JSON-RPC `eth_blockNumber` call to `https://x402.quicknode.com/arc-testnet`.
 - Arc testnet (chain 5042002), USDC asset `0x3600000000000000000000000000000000000000`.
@@ -13,3 +13,7 @@ This is one user-authorized Agent3 Purser pilot order, not evidence of external 
 - Circle Gateway balance on the Agent3 depositor fell from **0.010000 to 0.009900 testnet USDC**, exactly 0.000100, with `pendingBatch=0`. This is an independent read after the seller response, but it is still Circle's API, not an independently observed final onchain settlement of the nanopayment.
 
 No mainnet funds were used. No other order was placed. The raw payment signature and private key remain in ignored private state/wallet files and must not be published. This one trial establishes a working third-party testnet request and objective response check; it does not establish a real Agent3 business need, live model procurement, outside users, or final chain settlement of the batched payment.
+
+## Settlement follow-up, 2026-09-30
+
+Circle now reports the transfer completed and links it to Arc transaction `0x333a1462e1be41002bc569ebf98ac68d2eb6fa8caf521d72962be6e1025b22db`. An independent Arc public RPC confirms a successful Gateway batch whose decoded calldata debits this buyer 100 atomic USDC and credits the expected QuickNode payee 100. The UUID-to-hash mapping comes from Circle; the transaction and exact entries are independently readable on Arc. See the [verification report and read-only reproduction command](../docs/settlement-verification-20260930.md). This closes the original settlement-evidence gap to that stated scope, without changing the unconfirmed seller-domain authorization or the absence of outside adoption.
