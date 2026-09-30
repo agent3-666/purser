@@ -81,7 +81,9 @@ try {
     amount: "1000", payTo: payee, maxTimeoutSeconds: 60,
     extra: { name: "GatewayWalletBatched", version: "1", verifyingContract: "0x0077777d7EBA4688BDeF3E311b846F25870A19B9",
       payeeAuthorization: encodeAuthorization(auth) } };
-  challenge = Buffer.from(JSON.stringify({ x402Version: 2, resource: { url }, accepts: [offer] })).toString("base64");
+  const challengeRoot = { x402Version: 2, resource: { url }, accepts: [offer],
+    extensions: { "sign-in-with-x": { info: { nonce: "first", issuedAt: "first", expirationTime: "first" } } } };
+  challenge = Buffer.from(JSON.stringify(challengeRoot)).toString("base64");
   const quote = await fetchUnpaidQuote({ url, method: "POST", body: JSON.stringify({ task: "test" }), headers: { "content-type": "application/json" } });
   const digest = (value: string) => createHash("sha256").update(value).digest("hex");
   const base = { quote, approvedQuoteSha256: quote.paymentRequiredSha256,
@@ -123,7 +125,10 @@ try {
       ...base.payeeVerification, now: now - 3600 } }), /rejected payee authorization/);
   challenge = originalChallenge;
   assert.equal(paidCount, 0);
+  onUnpaid = () => { challenge = Buffer.from(JSON.stringify({ ...challengeRoot,
+    extensions: { "sign-in-with-x": { info: { nonce: "second", issuedAt: "second", expirationTime: "second" } } } })).toString("base64"); };
   const result = await buyGatewayOnce({ ...base, orderId: "purchase-1" });
+  challenge = originalChallenge;
   assert.equal(result.state, "server_ack_unverified");
   assert.equal(paidCount, 1);
   assert.equal(signCount, 1);

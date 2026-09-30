@@ -2,7 +2,7 @@
 
 Purser is a purchasing desk for agents that pay for x402 services. Before a payment it checks that the payout address in the offer is one the seller's own domain authorized, and it hands signing to an execution layer that enforces limits and never pays the same thing twice.
 
-The tag `tameion-start` holds the pre-event pieces. Event-period work now includes objective HTTP delivery checks, a purchasing-decision boundary, read-only ingestion of live x402 v2 HTTP 402 offers, and a guarded local Gateway buyer experiment. The buyer boundary filters quotes by service kind, billing unit, required capability, price, offer lifetime and payee verdict before accepting a model's choice. It records deferrals and rejected model choices. A live purchasing model, semantic review of what a paid call returned, and verified x402 settlement on Arc are not connected yet.
+The tag `tameion-start` holds the pre-event pieces. Event-period work now includes objective HTTP delivery checks, a purchasing-decision boundary, live x402 v2 quote ingestion, and a guarded Gateway buyer. On 2026-09-30, one approved Arc testnet QuickNode request returned a valid block height and Circle Gateway debited 0.0001 test USDC. The seller's signed payee authorization and an independent final onchain settlement record remain unavailable. A live purchasing model and semantic review are not connected yet. See the [paid trial record](research/quicknode_paid_trial_2026-09-30.md).
 
 Built by Agent3 for the Tameion Agents Hackathon (Canteen × Circle), settling in USDC on Arc.
 
@@ -48,15 +48,15 @@ A workflow supplies a purchase need and independently verified offers. The model
 
 An unpaid GET or pre-agreed POST captures the exact `PAYMENT-REQUIRED` header and response body, then parses supported x402 v2 exact-EVM options. It requires HTTP 402 and binds `resource.url` to the requested URL as a Purser safety policy. This strict policy rejected two observed services whose challenge named a different URL; that observation alone is not a claim that those services violate x402. Each parsed offer is checked with `verifyPayee` against the seller domain's separately fetched identity document. A missing authorization remains `unconfirmed`; catalog presence does not upgrade it. The read path never sends `PAYMENT-SIGNATURE` or `X-PAYMENT`.
 
-`research/live_quotes_2026-09-29.json` retains three real unpaid 402 responses, including exact public wire headers and request bodies. QuickNode's Arc testnet option was quoted at 100 atomic USDC units (0.0001 USDC), but its route is `GatewayWalletBatched` and its payee verdict was `unconfirmed`. The local native-transfer executor still rejects `x402_http` offers. No testnet payment has occurred.
+`research/live_quotes_2026-09-29.json` retains three real unpaid 402 responses, including exact public wire headers and request bodies. QuickNode's Arc testnet option was quoted at 100 atomic USDC units (0.0001 USDC), but its route is `GatewayWalletBatched` and its payee verdict was `unconfirmed`. The local native-transfer executor still rejects `x402_http` offers. A separate guarded Gateway path completed one testnet QuickNode trial on 2026-09-30; the earlier probe file remains unpaid evidence only.
 
 **6. Isolated Gateway buyer experiment** (`src/x402/gateway-buyer.ts`)
 
 For a separately approved Arc testnet order, this adapter binds the original 402 and HTTP request, requires confirmed seller-domain authorization by default, enforces order/daily/lifetime caps, and uses Circle's batching SDK to sign and send one x402 v2 HTTP request. An `unconfirmed` payee can proceed only with an explicit short-lived human exception bound to the exact order, request, quote, address, amount and verifier reasons; `rejected` can never be overridden. This accepts a known risk and does not upgrade the verdict to `confirmed`. The adapter journals the exact signed authorization locally and never automatically re-signs an unknown outcome. A seller's success receipt is marked `server_ack_unverified`: live Circle facilitator verification and Arc settlement remain untested. The Circle authorization remains valid for about seven days, so uncertain attempts continue to reserve budget. The local experiment verifies the received Gateway signature but does not move testnet funds. See [buyer integration](docs/buyer-integration.md).
 
-A read-only preflight checks the Agent3 wallet's ERC-20 balance, Gateway allowance, Gateway unified balance, and a fresh QuickNode 402. Its 2026-09-29 run found 5 testnet USDC in the wallet, zero allowance and zero Gateway balance, while QuickNode's 0.0001 USDC payee remained unconfirmed. None of these observations is a purchase or settlement.
+A read-only preflight checks the Agent3 wallet's ERC-20 balance, Gateway allowance, Gateway unified balance, and a fresh QuickNode 402. The 2026-09-29 preflight found zero Gateway balance. After the single 2026-09-30 pilot, Circle Gateway reported 0.009900 testnet USDC, down from the funded 0.010000, and the QuickNode payee was still unconfirmed.
 
-For a future Arc block-height purchase, `eval/criteria.v1.json` states the acceptance rule before any paid result. `src/delivery/arc-block.ts` checks a paid JSON-RPC block height against a separate Arc public RPC query. The validator is tested, but has not evaluated a paid response. See the [x402 Foundation HTTP transport spec](https://github.com/x402-foundation/x402/blob/main/specs/transports-v2/http.md) for the v2 wire headers.
+`eval/criteria.v1.json` states the Arc block-height acceptance rule before the paid result. The 2026-09-30 paid QuickNode result was 5 blocks behind a separate Arc public RPC query, within that rule. See the [x402 Foundation HTTP transport spec](https://github.com/x402-foundation/x402/blob/main/specs/transports-v2/http.md) for the v2 wire headers.
 
 ## Run it
 
@@ -79,7 +79,7 @@ The executor experiments measure "paid once" from outside the executor, using th
 
 Results are written to `out/`.
 
-**Evidence status:** The chain scenarios run on local Anvil, with its public test key. There is no Arc testnet transaction or third-party usage in this repository yet. The 2026-09-23 marketplace snapshot and 2026-09-29 live quotes in `research/` are unpaid read-only probes, not proof of a completed purchase. Local decisions and delivery checks are not traction.
+**Evidence status:** Local chain scenarios run on Anvil. The Arc testnet Gateway deposit has onchain success receipts. One QuickNode third-party testnet request returned a valid response and Circle Gateway recorded a 0.0001 test USDC debit. The nanopayment's final onchain settlement has not been independently verified. The marketplace snapshot and 9/29 live quotes are unpaid read-only probes. There are no verified external users or live-model procurement decisions.
 
 ## Where the project started
 

@@ -64,6 +64,22 @@ function asObject(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("invalid Gateway quote object");
   return value as Record<string, unknown>;
 }
+/** QuickNode rotates SIWX freshness fields on every 402. They do not change a Gateway offer. */
+function quoteWithoutSiwxFreshness(header: string): string {
+  const root = asObject(JSON.parse(Buffer.from(header, "base64").toString("utf8")));
+  const copy = structuredClone(root);
+  const extensions = copy.extensions;
+  if (extensions && typeof extensions === "object" && !Array.isArray(extensions)) {
+    const siwx = (extensions as Record<string, unknown>)["sign-in-with-x"];
+    if (siwx && typeof siwx === "object" && !Array.isArray(siwx)) {
+      const info = (siwx as Record<string, unknown>).info;
+      if (info && typeof info === "object" && !Array.isArray(info)) {
+        for (const key of ["nonce", "issuedAt", "expirationTime"]) delete (info as Record<string, unknown>)[key];
+      }
+    }
+  }
+  return JSON.stringify(copy);
+}
 
 export async function buyGatewayOnce(order: ApprovedGatewayOrder): Promise<GatewayAttempt> {
   if (!/^[A-Za-z0-9_-]{1,80}$/.test(order.orderId)) throw new Error("invalid order ID");
@@ -108,7 +124,10 @@ export async function buyGatewayOnce(order: ApprovedGatewayOrder): Promise<Gatew
   }
   const fresh = await captureUnpaid402(request);
   if (!inputUnchanged()) throw new Error("purchase inputs mutated during preflight");
-  if (fresh.paymentRequiredSha256 !== quoteSha256) throw new Error("live 402 changed since approval");
+  if (fresh.paymentRequiredSha256 !== quoteSha256 &&
+      quoteWithoutSiwxFreshness(fresh.paymentRequiredHeader) !== quoteWithoutSiwxFreshness(quoteHeader)) {
+    throw new Error("live 402 changed since approval");
+  }
   // Reparse raw wire bytes; do not trust editable derived offers from a model or caller.
   const parsedOffers = parsePaymentRequired(quoteHeader, request.url);
   const root = asObject(JSON.parse(Buffer.from(quoteHeader, "base64").toString("utf8")));

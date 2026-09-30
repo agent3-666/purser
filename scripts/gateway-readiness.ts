@@ -38,7 +38,7 @@ try {
   quicknode = { observedAt: quote.observedAt, headerSha256: quote.paymentRequiredSha256,
     offers: verified.filter(({ offer }) => offer.network === "eip155:5042002" && offer.asset === usdc)
       .map(({ offer, verification }) => ({ amountAtomicUsdc: offer.amount, amountUsdc: formatUnits(BigInt(offer.amount), 6),
-        payTo: offer.payTo, verdict: verification.verdict, reason: verification.reason,
+        payTo: offer.payTo, verdict: verification.verdict, reasons: verification.reasons,
         route: (offer.extra as Record<string, unknown> | undefined)?.name })) };
 } catch (error) { quicknodeError = error instanceof Error ? error.message : String(error); }
 
