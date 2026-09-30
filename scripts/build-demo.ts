@@ -6,6 +6,7 @@ import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { encodeAuthorization, identityDocument, signPayeeAuthorization } from "../src/payee-auth/sign.js";
 import { verifyPayee } from "../src/payee-auth/verify.js";
 import { recommendPurchase, type PurchaseNeed, type PurchaseOffer } from "../src/purchasing/recommend.js";
+import { evaluateDemoScenario, type DemoFixture } from "../src/demo/scenario.js";
 
 const seller = privateKeyToAccount(generatePrivateKey());
 const payee = privateKeyToAccount(generatePrivateKey()).address;
@@ -40,9 +41,26 @@ assert.equal(negative.outcome, "defer");
 const dir = new URL("../docs/demo/", import.meta.url);
 mkdirSync(dir, { recursive: true });
 // The private keys and model call do not enter these public fixtures.
-writeFileSync(new URL("fixtures.json", dir), JSON.stringify({ createdAt: new Date().toISOString(),
+const fixture: DemoFixture & { label: string } = { createdAt: new Date(now * 1000).toISOString(),
   label: "Synthetic local demo; no network service or payment is contacted",
-  sellerDomain, identity, offer, need, purchaseOffer }, null, 2));
+  sellerDomain, identity, offer, need, purchaseOffer };
+writeFileSync(new URL("fixtures.json", dir), JSON.stringify(fixture, null, 2));
+// A future viewer must still see the historical clean example; the explicit expiry scenario must fail.
+const originalDateNow = Date.now;
+try {
+  Date.now = () => (now + 365 * 24 * 3600) * 1000;
+  const futureClean = await evaluateDemoScenario(fixture, "clean");
+  assert.equal(futureClean.verification.verdict, "confirmed");
+  assert.equal(futureClean.proposal.outcome, "propose");
+  assert.equal(futureClean.asOf, now);
+  const expired = await evaluateDemoScenario(fixture, "expired");
+  assert.equal(expired.verification.verdict, "rejected");
+  assert.ok(expired.verification.reasons.includes("expired"));
+  assert.equal(expired.proposal.outcome, "defer");
+  assert.equal(expired.modelCalls.length, 0);
+} finally {
+  Date.now = originalDateNow;
+}
 const built = await build({ entryPoints: [new URL("../src/demo/browser.ts", import.meta.url).pathname],
   outfile: new URL("bundle.js", dir).pathname, bundle: true, platform: "browser", format: "esm",
   target: "es2022", minify: true, metafile: true, logLevel: "warning" });
@@ -53,4 +71,4 @@ const bundle = readFileSync(new URL("bundle.js", dir), "utf8");
 for (const forbidden of ["/Users/", "node:fs", "node:crypto", "Payment-Signature"]) {
   assert.ok(!bundle.includes(forbidden), `static demo bundle must not contain ${forbidden}`);
 }
-console.log("PASS static demo build: existing verifier confirmed/rejected/unconfirmed and purchase boundary proposed/deferred");
+console.log("PASS static demo build: historical clean scenario survives future wall clock; simulated expiry rejects");

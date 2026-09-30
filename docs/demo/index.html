@@ -42,7 +42,7 @@
   <header><div class="brand">AGENT3 / PURSER</div><div class="tag">Local control-room demo · static and payment-free</div></header>
   <h1>One changed payout address changes the decision.</h1>
   <p class="lead">Try the same synthetic service offer with a valid seller authorization, a rewritten payout address, or no authorization. This page runs Purser’s actual EIP-712 payee verifier and purchasing proposal boundary in your browser.</p>
-  <div class="notice"><strong>Scope:</strong> These are synthetic local examples. The purchasing example uses a local native-transfer route and creates proposals only; this page never contacts a seller, signs a payment, or claims a live Arc transaction. The separate QuickNode testnet trial has its own evidence.</div>
+  <div class="notice"><strong>Scope:</strong> These are synthetic local examples evaluated at the fixture's historical snapshot, not current live offers. The purchasing example uses a local native-transfer route and creates proposals only; this page never contacts a seller, signs a payment, or claims a live Arc transaction. The separate QuickNode testnet trial has its own evidence.</div>
   <div class="grid">
     <section class="card" aria-label="Choose a scenario">
       <h2>Change the offer</h2>
@@ -52,11 +52,12 @@
         <button data-scenario="tampered" aria-pressed="false">02 · Payout address rewritten</button>
         <button data-scenario="missing" aria-pressed="false">03 · Authorization removed</button>
         <button data-scenario="revoked" aria-pressed="false">04 · Seller identity revoked</button>
+        <button data-scenario="expired" aria-pressed="false">05 · Advance simulated time past expiry</button>
       </div>
       <label for="payee-input">Or enter a payout address</label>
       <input id="payee-input" spellcheck="false" autocomplete="off">
       <div class="choices"><button data-scenario="custom" aria-pressed="false">Check this address</button></div>
-      <p class="muted">Synthetic fixture built <span id="fixture-date">…</span>. No account key is included in the page.</p>
+      <p class="muted">Synthetic fixture built <span id="fixture-date">…</span>. Simulated evaluation time: <span id="evaluation-time">…</span>. No account key is included in the page.</p>
     </section>
     <section class="card" aria-label="Results">
       <h2>Control decision</h2>

@@ -1,5 +1,5 @@
 {
-  "createdAt": "2026-09-30T19:54:39.903Z",
+  "createdAt": "2026-09-30T20:20:04.000Z",
   "label": "Synthetic local demo; no network service or payment is contacted",
   "sellerDomain": "local-demo.invalid",
   "identity": {
@@ -7,9 +7,9 @@
     "sellerDomain": "local-demo.invalid",
     "identities": [
       {
-        "address": "0x6bf20B5591357f768Fd9c73c1fFbab1f7353D514",
-        "validAfter": 1790798019,
-        "validBefore": 1793390079,
+        "address": "0x682AE369d2a076404F7eE7E737C0f578b9B6a9D2",
+        "validAfter": 1790799544,
+        "validBefore": 1793391604,
         "status": "active"
       }
     ]
@@ -18,21 +18,21 @@
     "resource": "https://local-demo.invalid/v1/search",
     "network": "eip155:5042002",
     "asset": "0x3600000000000000000000000000000000000000",
-    "payTo": "0x5ec19A7bE605D9238c4e201F86d6A1eB40b81591",
+    "payTo": "0x124Cb31066650118976b6F8823A9B371fA822AbD",
     "amount": "100",
     "extra": {
       "payeeAuthorization": {
         "sellerDomain": "local-demo.invalid",
-        "sellerId": "0x6bf20B5591357f768Fd9c73c1fFbab1f7353D514",
+        "sellerId": "0x682AE369d2a076404F7eE7E737C0f578b9B6a9D2",
         "network": "eip155:5042002",
         "asset": "0x3600000000000000000000000000000000000000",
-        "payTo": "0x5ec19A7bE605D9238c4e201F86d6A1eB40b81591",
+        "payTo": "0x124Cb31066650118976b6F8823A9B371fA822AbD",
         "resourcePrefix": "https://local-demo.invalid/v1/",
-        "validAfter": "1790798019",
-        "validBefore": "1793390079",
+        "validAfter": "1790799544",
+        "validBefore": "1793391604",
         "rotationSeq": "1",
         "nonce": "0x0000000000000000000000000000000000000000000000000000000000000000",
-        "signature": "0x99ed82b3a63bbf6ac28cf303fc548eb1e72c4831a1ee81df6a77ac393d963f6d43689d628918fff3d98984469278d3d08249b77117d8415e4147c6c66ab01bdd1c"
+        "signature": "0xa2b9fb65ac5e586463e07a2877db12f4ab12f3370e1e0819bfba5ae71338ddb42e00a0f63bdac90493a87d730b8d6d5f8863153b1a4bb5f839de648ae643b49f1c"
       }
     }
   },
@@ -49,7 +49,7 @@
   "purchaseOffer": {
     "id": "seller-a",
     "sellerId": "local-demo.invalid",
-    "payTo": "0x5ec19A7bE605D9238c4e201F86d6A1eB40b81591",
+    "payTo": "0x124Cb31066650118976b6F8823A9B371fA822AbD",
     "paymentRoute": "local_native_transfer",
     "resource": "https://local-demo.invalid/v1/search",
     "resourceKind": "web_search",
@@ -58,7 +58,7 @@
       "web_results"
     ],
     "amountWei": "100",
-    "validBefore": 1790801679,
+    "validBefore": 1790803204,
     "payeeVerdict": "confirmed"
   }
 }
