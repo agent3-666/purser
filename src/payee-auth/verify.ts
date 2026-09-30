@@ -10,13 +10,14 @@
  */
 
 import { getAddress, isAddress, recoverTypedDataAddress, type Address, type Hex } from "viem";
-import { rotationKey, type PayeeLedger } from "./ledger.js";
+import { rotationKey } from "./key.js";
 import {
   EIP712_DOMAIN,
   EIP712_TYPES,
   type OfferUnderCheck,
   type PayeeAuthorizationMessage,
   type PayeeIdentityDocument,
+  type PayeeLedgerReader,
   type ReasonCode,
   type VerificationResult,
 } from "./types.js";
@@ -25,7 +26,7 @@ export type IdentityFetcher = (domain: string) => Promise<PayeeIdentityDocument 
 
 export interface VerifyOptions {
   fetchIdentity: IdentityFetcher;
-  ledger: PayeeLedger;
+  ledger: PayeeLedgerReader;
   now?: number; // unix seconds
   /** Longest validity window accepted for a per-request (nonce-bearing) authorization. */
   maxEphemeralWindowSeconds?: number;

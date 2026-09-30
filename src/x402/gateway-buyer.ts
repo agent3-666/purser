@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { BatchEvmScheme } from "@circle-fin/x402-batching/client";
-import { getAddress, type Address } from "viem";
+import { getAddress, isAddress, type Address } from "viem";
 import type { LocalAccount } from "viem/accounts";
 import { captureUnpaid402, parsePaymentRequired, verifyObservedQuote, type ObservedQuote } from "./quote.js";
 import { PayeeLedger } from "../payee-auth/ledger.js";
@@ -47,7 +47,7 @@ export interface ApprovedGatewayOrder {
   totalAtomicLimit: bigint;
   journalDir: string;
   signer: LocalAccount;
-  payeeVerification: Partial<VerifyOptions> & Pick<VerifyOptions, "ledger">;
+  payeeVerification: Partial<VerifyOptions> & { ledger: PayeeLedger };
   /** No default exception. Rejected payee evidence can never be overridden. */
   unconfirmedPayeeException?: UnconfirmedPayeeException;
 }
@@ -63,6 +63,20 @@ function save(path: string, journal: Journal): void {
 function asObject(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("invalid Gateway quote object");
   return value as Record<string, unknown>;
+}
+async function boundedBody(response: Response): Promise<string> {
+  const reader = response.body?.getReader();
+  if (!reader) return "";
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const next = await reader.read();
+    if (next.done) break;
+    size += next.value.byteLength;
+    if (size > 128_000) { await reader.cancel(); throw new Error("paid response exceeds limit"); }
+    chunks.push(next.value);
+  }
+  return new TextDecoder().decode(Buffer.concat(chunks));
 }
 /** QuickNode rotates SIWX freshness fields on every 402. They do not change a Gateway offer. */
 function quoteWithoutSiwxFreshness(header: string): string {
@@ -111,7 +125,8 @@ export async function buyGatewayOnce(order: ApprovedGatewayOrder): Promise<Gatew
     sha256(JSON.stringify(quote.request)) === requestSha256 &&
     JSON.stringify(order.unconfirmedPayeeException) === exceptionSnapshot;
   const now = Math.floor(Date.now() / 1000);
-  if (Math.abs(now - Math.floor(Date.parse(quote.observedAt) / 1000)) > 60) throw new Error("quote is stale");
+  const observedAtMs = Date.parse(quote.observedAt);
+  if (!Number.isFinite(observedAtMs) || Math.abs(now - Math.floor(observedAtMs / 1000)) > 60) throw new Error("quote is stale");
   if (sha256(quoteHeader) !== quoteSha256 || quoteSha256 !== approvedQuoteSha256) throw new Error("quote changed since approval");
   const url = new URL(request.url);
   if (url.protocol !== "https:" && !(url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname))) {
@@ -195,6 +210,11 @@ export async function buyGatewayOnce(order: ApprovedGatewayOrder): Promise<Gatew
       if (!observation || typeof signedAuth.sellerId !== "string") throw new Error("confirmed authorization lacked ledger observation");
       payeeVerification.ledger.commit(observation, getAddress(signedAuth.sellerId));
     }
+    const signingNow = Math.floor(Date.now() / 1000);
+    if (signingNow - Math.floor(observedAtMs / 1000) > 60 ||
+        (exception && exception.expiresAt <= signingNow)) {
+      throw new Error("quote or human exception expired before signing; order held");
+    }
     const scheme = new BatchEvmScheme(signer);
     const payload = await scheme.createPaymentPayload(2, selected as unknown as Parameters<typeof scheme.createPaymentPayload>[1]);
     const paymentHeader = Buffer.from(JSON.stringify({ ...payload, resource: root.resource, accepted: selected })).toString("base64");
@@ -211,8 +231,7 @@ export async function buyGatewayOnce(order: ApprovedGatewayOrder): Promise<Gatew
     }
     let responseBody: string;
     try {
-      responseBody = await response.text();
-      if (responseBody.length > 128_000) throw new Error("paid response exceeds limit");
+      responseBody = await boundedBody(response);
     } catch {
       save(journalPath, { ...journal, state: "sent_unknown", responseStatus: response.status });
       throw new Error("paid response unreadable; outcome unknown");
@@ -223,6 +242,8 @@ export async function buyGatewayOnce(order: ApprovedGatewayOrder): Promise<Gatew
     catch { settlement = undefined; }
     const settlementObject = asObjectOrNull(settlement);
     const confirmed = response.ok && settlementObject?.success === true && settlementObject.network === NETWORK &&
+      typeof settlementObject.payer === "string" && isAddress(settlementObject.payer) &&
+      getAddress(settlementObject.payer) === getAddress(signer.address) &&
       typeof settlementObject.transaction === "string" && settlementObject.transaction.length > 0;
     journal = { ...journal, state: confirmed ? "server_ack_unverified" : "sent_unknown", responseStatus: response.status, settlement };
     save(journalPath, journal);

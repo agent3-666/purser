@@ -47,6 +47,12 @@ export interface SignedPayeeAuthorization {
   signature: Hex;
 }
 
+/** Read-only view needed by verification; implementations may keep state in memory or on disk. */
+export interface PayeeLedgerReader {
+  current(key: string): { rotationSeq: bigint; payTo: Address } | null;
+  nonceSeen(sellerId: Address, nonce: Hex): boolean;
+}
+
 /** Published by the seller at https://<domain>/.well-known/x402-payee.json */
 export interface PayeeIdentityDocument {
   version: 1;

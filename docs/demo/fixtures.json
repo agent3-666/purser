@@ -1,0 +1,64 @@
+{
+  "createdAt": "2026-09-30T19:54:39.903Z",
+  "label": "Synthetic local demo; no network service or payment is contacted",
+  "sellerDomain": "local-demo.invalid",
+  "identity": {
+    "version": 1,
+    "sellerDomain": "local-demo.invalid",
+    "identities": [
+      {
+        "address": "0x6bf20B5591357f768Fd9c73c1fFbab1f7353D514",
+        "validAfter": 1790798019,
+        "validBefore": 1793390079,
+        "status": "active"
+      }
+    ]
+  },
+  "offer": {
+    "resource": "https://local-demo.invalid/v1/search",
+    "network": "eip155:5042002",
+    "asset": "0x3600000000000000000000000000000000000000",
+    "payTo": "0x5ec19A7bE605D9238c4e201F86d6A1eB40b81591",
+    "amount": "100",
+    "extra": {
+      "payeeAuthorization": {
+        "sellerDomain": "local-demo.invalid",
+        "sellerId": "0x6bf20B5591357f768Fd9c73c1fFbab1f7353D514",
+        "network": "eip155:5042002",
+        "asset": "0x3600000000000000000000000000000000000000",
+        "payTo": "0x5ec19A7bE605D9238c4e201F86d6A1eB40b81591",
+        "resourcePrefix": "https://local-demo.invalid/v1/",
+        "validAfter": "1790798019",
+        "validBefore": "1793390079",
+        "rotationSeq": "1",
+        "nonce": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "signature": "0x99ed82b3a63bbf6ac28cf303fc548eb1e72c4831a1ee81df6a77ac393d963f6d43689d628918fff3d98984469278d3d08249b77117d8415e4147c6c66ab01bdd1c"
+      }
+    }
+  },
+  "need": {
+    "id": "local-demo-search",
+    "resourceKind": "web_search",
+    "billingUnit": "per_request",
+    "requiredCapabilities": [
+      "web_results"
+    ],
+    "maxAmountWei": "100",
+    "minimumOfferLifetimeSeconds": 30
+  },
+  "purchaseOffer": {
+    "id": "seller-a",
+    "sellerId": "local-demo.invalid",
+    "payTo": "0x5ec19A7bE605D9238c4e201F86d6A1eB40b81591",
+    "paymentRoute": "local_native_transfer",
+    "resource": "https://local-demo.invalid/v1/search",
+    "resourceKind": "web_search",
+    "billingUnit": "per_request",
+    "capabilities": [
+      "web_results"
+    ],
+    "amountWei": "100",
+    "validBefore": 1790801679,
+    "payeeVerdict": "confirmed"
+  }
+}

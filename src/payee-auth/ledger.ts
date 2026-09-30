@@ -10,6 +10,7 @@
 import { mkdirSync, readFileSync, renameSync, writeFileSync, openSync, fsyncSync, closeSync, existsSync } from "node:fs";
 import { dirname } from "node:path";
 import type { Address, Hex } from "viem";
+export { rotationKey } from "./key.js";
 
 interface Rotation {
   rotationSeq: string; // bigint as string, for JSON
@@ -21,10 +22,6 @@ interface LedgerState {
   version: 1;
   rotations: Record<string, Rotation>;
   nonces: Record<string, string>; // `${sellerId}:${nonce}` -> first seen
-}
-
-export function rotationKey(sellerId: Address, network: string, asset: Address): string {
-  return `${sellerId.toLowerCase()}|${network}|${asset.toLowerCase()}`;
 }
 
 export class PayeeLedger {

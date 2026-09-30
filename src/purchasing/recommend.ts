@@ -1,6 +1,5 @@
 /** A proposal boundary for a purchasing model. Eligibility is decided here, not by the model. */
-import { isAddress, type Address } from "viem";
-import { createHash } from "node:crypto";
+import { isAddress, sha256, stringToHex, type Address } from "viem";
 import type { PurchaseOrder } from "../executor/journal.js";
 export interface PurchaseNeed {
   id: string;
@@ -57,7 +56,7 @@ export type PurchasingModel = (input: {
 }) => Promise<{ offerId: string; reason: string }>;
 
 function fingerprint(offer: PurchaseOffer): string {
-  return createHash("sha256").update(JSON.stringify(offer)).digest("hex");
+  return sha256(stringToHex(JSON.stringify(offer))).slice(2);
 }
 
 function amount(value: string): bigint | null {

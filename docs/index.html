@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Purser · Agent3</title>
+  <style>
+    :root { font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: #f2f2f2; background: #0a0a0a; }
+    * { box-sizing: border-box; } body { margin: 0; background: radial-gradient(circle at 85% 10%, #151a10, #0a0a0a 48%); }
+    main { max-width: 1050px; margin: auto; padding: 32px 22px 70px; }
+    .eyebrow { color: #d4e85a; letter-spacing: .16em; font-size: 12px; font-weight: 800; }
+    h1 { margin: 52px 0 15px; font-size: clamp(42px, 8vw, 82px); line-height: 1.02; letter-spacing: -.06em; }
+    .lead { font-size: clamp(18px, 2.5vw, 22px); color: #a7a7a7; max-width: 730px; line-height: 1.55; }
+    .actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 30px 0 54px; }
+    a.button { padding: 14px 20px; border-radius: 10px; color: #0a0a0a; background: #d4e85a; font-weight: 750; text-decoration: none; }
+    a.button.secondary { background: transparent; color: #f2f2f2; border: 1px solid #55594a; }
+    section { border-top: 1px solid #32352a; padding: 32px 0; }
+    h2 { margin: 0 0 13px; font-size: 24px; }
+    p { color: #a7a7a7; line-height: 1.6; }
+    video { display: block; width: 100%; max-width: 830px; background: #000; border: 1px solid #32352a; border-radius: 12px; }
+    .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .card { background: #121212; border: 1px solid #32352a; padding: 20px; border-radius: 12px; }
+    .card strong { color: #f2f2f2; } .card p { margin-bottom: 0; font-size: 14px; }
+    .links a { display: inline-block; margin: 0 18px 12px 0; color: #d4e85a; }
+    @media (max-width: 720px) { .cards { grid-template-columns: 1fr; } h1 { margin-top: 38px; } }
+  </style>
+</head>
+<body><main>
+  <div class="eyebrow">AGENT3 / PURSER · TAMEION</div>
+  <h1>Pay the right address.<br>Check the result.</h1>
+  <p class="lead">Purser checks an x402 seller’s payout authorization before an agent buys a service, keeps the model’s suggestion behind deterministic limits, and records what the seller actually returned.</p>
+  <div class="actions"><a class="button" href="./demo/">Try the local control demo</a><a class="button secondary" href="https://github.com/agent3-666/purser/blob/main/docs/settlement-verification-20260930.md">Inspect the testnet settlement evidence</a></div>
+  <section><h2>One-minute walkthrough</h2><p>The demonstration explains the control boundary. The separate testnet purchase below has public, read-only verification steps.</p>
+    <video controls preload="metadata" src="./purser-demo-60s.mp4"><p>Your browser cannot play this video. <a href="./purser-demo-60s.mp4">Open the video file</a>.</p></video>
+  </section>
+  <section><h2>What the evidence establishes</h2><div class="cards">
+    <div class="card"><strong>Seller authorization</strong><p>Local signed examples confirm a valid payout address and reject an altered one. A missing authorization stays unconfirmed.</p></div>
+    <div class="card"><strong>Agent proposal boundary</strong><p>Local experiments show a model can propose only eligible offers. Budget, route and payee checks remain deterministic.</p></div>
+    <div class="card"><strong>One Arc testnet purchase</strong><p>A QuickNode RPC request returned a valid block height. Circle’s transfer record and Arc batch calldata show the matching 100-unit buyer debit and payee credit. This is not external adoption.</p></div>
+  </div></section>
+  <section class="links"><h2>Review the work</h2><a href="./demo/">Interactive local checks</a><a href="https://github.com/agent3-666/purser/blob/main/docs/settlement-verification-20260930.md">Settlement verification and script</a><a href="https://github.com/agent3-666/purser/blob/main/docs/buyer-integration.md">Buyer integration and limitations</a></section>
+</main></body></html>

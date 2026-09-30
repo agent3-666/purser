@@ -26,6 +26,8 @@ const observedBuyer = new Proxy(buyer, { get(target, property, receiver) {
 const payee = privateKeyToAccount(generatePrivateKey()).address;
 const dir = mkdtempSync(join(tmpdir(), "purser-gateway-"));
 let host = "", challenge = "", paidCount = 0, unpaidCount = 0, omitReceipt = false;
+let receiptPayer: string = buyer.address;
+let oversizedPaidBody = false;
 let onUnpaid: (() => void) | null = null;
 const server = createServer(async (req, res) => {
   if (req.url === "/.well-known/x402-payee.json") {
@@ -64,8 +66,8 @@ const server = createServer(async (req, res) => {
       }, signature: wire.payload.signature });
     assert.equal(recovered, buyer.address);
     assert.ok(Number(wire.payload.authorization.validBefore) - now <= 605000);
-    res.writeHead(200, omitReceipt ? {} : { "payment-response": Buffer.from(JSON.stringify({ success: true, network: "eip155:5042002", transaction: "local-simulated" })).toString("base64") });
-    res.end(JSON.stringify({ result: "local test delivery" }));
+    res.writeHead(200, omitReceipt ? {} : { "payment-response": Buffer.from(JSON.stringify({ success: true, network: "eip155:5042002", transaction: "local-simulated", payer: receiptPayer })).toString("base64") });
+    res.end(oversizedPaidBody ? "x".repeat(128_001) : JSON.stringify({ result: "local test delivery" }));
     return;
   }
   res.writeHead(404).end();
@@ -91,6 +93,8 @@ try {
     dailyAtomicLimit: 2000n, totalAtomicLimit: 2000n, journalDir: dir, signer: observedBuyer,
     payeeVerification: { ledger: new PayeeLedger(join(dir, "payee-ledger.json")), now,
       fetchIdentity: async () => identityDocument(host, [{ address: seller.address, validAfter: now - 10, validBefore: now + 3600, status: "active" }]) } };
+  await assert.rejects(buyGatewayOnce({ ...base, orderId: "invalid-clock", quote: { ...quote, observedAt: "not-a-date" } }), /quote is stale/);
+  assert.equal(signCount, 0);
   for (const field of ["body", "url", "payTo"] as const) {
     const editableQuote = { ...quote, request: { ...quote.request } };
     const tampered = { ...base, orderId: `mutation-${field}`, quote: editableQuote };
@@ -182,6 +186,24 @@ try {
   assert.deepEqual(exceptionJournal.payeeReasons, ["no_authorization"]);
   assert.equal(exceptionJournal.unconfirmedPayeeException.exceptionId, "approval-1");
   assert.equal(exceptionJournal.unconfirmedPayeeException.reason, exception.reason);
+  const shortQuote = await fetchUnpaidQuote({ ...quote.request, body: JSON.stringify({ task: "exception expiry" }) });
+  const shortRequestSha256 = digest(JSON.stringify(shortQuote.request));
+  const shortException = { ...exception, exceptionId: "approval-short", orderId: "short-expiry",
+    quoteSha256: shortQuote.paymentRequiredSha256, requestSha256: shortRequestSha256,
+    expiresAt: Math.floor(Date.now() / 1000) + 2 };
+  const originalDateNow = Date.now;
+  let clockOffsetMs = 0;
+  Date.now = () => originalDateNow() + clockOffsetMs;
+  onUnpaid = () => { clockOffsetMs = 3_000; };
+  try {
+    await assert.rejects(buyGatewayOnce({ ...exceptionBase, orderId: "short-expiry", quote: shortQuote,
+      dailyAtomicLimit: 4000n, totalAtomicLimit: 4000n,
+      approvedQuoteSha256: shortQuote.paymentRequiredSha256,
+      approvedRequestSha256: shortRequestSha256,
+      unconfirmedPayeeException: shortException }), /expired before signing/);
+  } finally { Date.now = originalDateNow; clockOffsetMs = 0; onUnpaid = null; }
+  assert.equal(paidCount, 3);
+  assert.equal(signCount, 3);
   const tamperedPayee = "0x2222222222222222222222222222222222222222";
   challenge = Buffer.from(JSON.stringify({ x402Version: 2, resource: { url }, accepts: [{ ...offer, payTo: tamperedPayee }] })).toString("base64");
   const rejectedQuote = await fetchUnpaidQuote({ ...quote.request, body: JSON.stringify({ task: "rejected payee test" }) });
@@ -196,5 +218,30 @@ try {
   for (const headers of [{ Authorization: "Bearer secret" }, { Cookie: "secret=1" }, { "x-api-key": "secret" }] as Record<string, string>[]) {
     await assert.rejects(fetchUnpaidQuote({ url, method: "GET", headers }), /not safe to persist/);
   }
+  challenge = originalChallenge;
+  receiptPayer = payee;
+  const wrongPayerQuote = await fetchUnpaidQuote({ ...quote.request, body: JSON.stringify({ task: "wrong receipt payer" }) });
+  const wrongPayerResult = await buyGatewayOnce({ ...base, orderId: "wrong-receipt-payer", quote: wrongPayerQuote,
+    approvedQuoteSha256: wrongPayerQuote.paymentRequiredSha256,
+    approvedRequestSha256: digest(JSON.stringify(wrongPayerQuote.request)),
+    journalDir: join(dir, "wrong-payer"),
+    payeeVerification: { ...base.payeeVerification, ledger: new PayeeLedger(join(dir, "wrong-payer", "payee-ledger.json")) } });
+  assert.equal(wrongPayerResult.state, "sent_unknown");
+  assert.equal(paidCount, 4);
+  assert.equal(signCount, 4);
+  receiptPayer = buyer.address;
+  oversizedPaidBody = true;
+  const oversizedQuote = await fetchUnpaidQuote({ ...quote.request, body: JSON.stringify({ task: "oversized response" }) });
+  const oversizedDir = join(dir, "oversized-response");
+  await assert.rejects(buyGatewayOnce({ ...base, orderId: "oversized-response", quote: oversizedQuote,
+    approvedQuoteSha256: oversizedQuote.paymentRequiredSha256,
+    approvedRequestSha256: digest(JSON.stringify(oversizedQuote.request)), journalDir: oversizedDir,
+    payeeVerification: { ...base.payeeVerification, ledger: new PayeeLedger(join(oversizedDir, "payee-ledger.json")) } }),
+  /paid response unreadable/);
+  const oversizedJournal = JSON.parse(readFileSync(join(oversizedDir, "order-oversized-response.json"), "utf8"));
+  assert.equal(oversizedJournal.state, "sent_unknown");
+  assert.equal(paidCount, 5);
+  assert.equal(signCount, 5);
+  oversizedPaidBody = false;
   console.log("PASS Gateway buyer: confirmed payee, exact unconfirmed exception, rejected payee override blocked, one send, unknown hold, journal and credential guards");
 } finally { server.close(); rmSync(dir, { recursive: true, force: true }); }

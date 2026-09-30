@@ -13,6 +13,8 @@
     "experiments:gateway-buyer": "tsx experiments/gateway-buyer.ts",
     "experiments:arc-block": "tsx experiments/arc-block.ts",
     "preflight:gateway": "tsx scripts/gateway-readiness.ts",
+    "build:demo": "tsx scripts/build-demo.ts",
+    "verify:settlement": "tsx scripts/verify-settlement.ts",
     "experiments": "tsx experiments/payee-authorization.ts && tsx experiments/executor.ts && tsx experiments/delivery.ts && tsx experiments/purchasing.ts && tsx experiments/x402-quote.ts && tsx experiments/gateway-buyer.ts && tsx experiments/arc-block.ts",
     "mutation": "tsx scripts/mutation-check.ts"
   },
@@ -27,6 +29,7 @@
   },
   "devDependencies": {
     "@types/node": "^26.6.2",
+    "esbuild": "^0.25.12",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   }

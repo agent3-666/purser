@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -34,6 +35,8 @@ const recommended = await recommendPurchase(need, offers, async ({ eligibleOffer
   offerId: eligibleOffers[0].id, reason: "one qualified candidate",
 }), now, "seller-b");
 assert.equal(recommended.selectedOfferId, "qualified");
+assert.equal(recommended.selectedOfferFingerprint,
+  createHash("sha256").update(JSON.stringify(base)).digest("hex"));
 assert.equal(recommended.modelReason, "one qualified candidate");
 assert.equal(recommended.baselineCheapestEligibleId, "qualified");
 assert.equal(recommended.baselineFixedSellerId, undefined);
