@@ -7,12 +7,16 @@ for (const url of ["http://example.com/", "https://user:pass@example.com/", "htt
   assert.throws(() => validatePublicReadNeed({ ...need, url }), /invalid/);
 }
 const original = globalThis.fetch;
+const validBody = "Title: Public documentation\nURL Source: https://example.com/\nMarkdown Content:\nUSDC documentation";
 try {
   for (const [status, body, type, outcome] of [
-    [200, "USDC documentation", "text/markdown", "free_delivery_pass"],
+    [200, validBody, "text/markdown", "free_delivery_pass"],
     [200, "missing required information", "text/plain", "held"],
     [200, "USDC", "text/html", "held"],
     [200, "USDC".repeat(30), "text/plain", "held"],
+    [200, validBody.replace("https://example.com/", "https://wrong.net/"), "text/plain", "held"],
+    [200, validBody.replace("URL Source:", "Other Source:"), "text/plain", "held"],
+    [200, validBody.replace("Markdown Content:", "Other Content:"), "text/plain", "held"],
     [402, "payment required", "text/plain", "held"],
     [500, "upstream failure", "text/plain", "held"],
   ] as const) {
@@ -31,6 +35,6 @@ try {
     assert.equal(result.newPayments, 0);
     assert.equal(calls, 1, "no silent retry or paid fallback");
     if (status === 402) assert.equal(result.reason, "paid_route_requires_separate_approval");
-  }
+}
 } finally { globalThis.fetch = original; }
-console.log("PASS public documentation workflow: 6 URL guards and 6 delivery/no-payment cases");
+console.log("PASS public documentation workflow: 6 URL guards and 9 delivery/no-payment cases");

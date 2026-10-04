@@ -1,5 +1,6 @@
 /** Runs the real verifier and proposal boundary in the browser; deliberately contains no payment code. */
 import { evaluateDemoScenario, type DemoFixture } from "./scenario.js";
+import { verifyArcBlockHeight } from "../delivery/arc-block.js";
 const element = (id: string) => {
   const found = document.getElementById(id);
   if (!found) throw new Error(`missing demo element ${id}`);
@@ -38,3 +39,21 @@ for (const button of document.querySelectorAll<HTMLButtonElement>("[data-scenari
   });
 }
 void runScenario("clean").catch((error) => { element("status").textContent = `Local check failed: ${String(error)}`; });
+
+const deliveryInput = element("delivery-input") as HTMLTextAreaElement;
+function runDelivery(): void {
+  const result = verifyArcBlockHeight(new TextEncoder().encode(deliveryInput.value), "0x67");
+  element("delivery-status").textContent = result.outcome === "pass" ? "Pass: structurally valid, within height tolerance" : `Fail: ${result.reason}`;
+  element("delivery-trace").textContent = JSON.stringify(result, null, 2);
+}
+for (const button of document.querySelectorAll<HTMLButtonElement>("[data-delivery]")) {
+  button.addEventListener("click", () => {
+    const scenario = button.dataset.delivery;
+    deliveryInput.value = JSON.stringify(scenario === "error" ? { jsonrpc: "2.0", id: 1, result: "0x64", error: { code: -32000, message: "upstream failure" } } :
+      { jsonrpc: "2.0", id: 1, result: scenario === "stale" ? "0x10" : "0x64" }, null, 2);
+    runDelivery();
+  });
+}
+element("check-delivery").addEventListener("click", runDelivery);
+deliveryInput.value = JSON.stringify({ jsonrpc: "2.0", id: 1, result: "0x64" }, null, 2);
+runDelivery();

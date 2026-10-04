@@ -71,6 +71,15 @@
       <div class="trace"><h2>Inspect the result</h2><pre id="trace">Loading…</pre></div>
     </section>
   </div>
+  <section class="card trace" aria-label="Delivery response checks">
+    <h2>A response with a result can still be a failure</h2>
+    <p class="muted">Try the actual block-height validator with synthetic responses. The independent reference is fixed at 0x67 (103). These examples do not make an RPC call or a payment.</p>
+    <div class="choices"><button data-delivery="valid">Valid response</button><button data-delivery="error">Result plus RPC error</button><button data-delivery="stale">Stale block height</button></div>
+    <label for="delivery-input">Edit the synthetic JSON-RPC response</label>
+    <textarea id="delivery-input" rows="8" spellcheck="false" style="width:100%;padding:12px;background:#0d0d0d;color:#f2f2f2;border:1px solid #4a5041;border-radius:9px;font:13px ui-monospace,monospace"></textarea>
+    <div class="choices"><button id="check-delivery">Check this response</button></div>
+    <p id="delivery-status" role="status">Loading delivery checks…</p><pre id="delivery-trace"></pre>
+  </section>
   <footer>The authorization verifier decides whether the payout address was authorized by the seller’s published identity. “Confirmed” does not prove service quality or business identity. The model can propose only after deterministic eligibility checks; neither it nor this page can authorize a payment.</footer>
 </main>
 <script src="./bundle.js" type="module"></script>

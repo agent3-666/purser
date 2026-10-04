@@ -3,6 +3,7 @@
  * This path never loads a wallet, sends payment headers, or falls back to a paid route.
  */
 import { createHash } from "node:crypto";
+import { reviewPublicDocument } from "../delivery/public-document.js";
 
 export interface PublicReadNeed {
   id: string;
@@ -16,6 +17,7 @@ export interface PublicReadNeed {
 
 export interface PublicReadResult {
   at: string;
+  criteriaVersion: "public-document-v2";
   needId: string;
   purpose: string;
   targetUrl: string;
@@ -26,6 +28,8 @@ export interface PublicReadResult {
   bytes?: number;
   bodySha256?: string;
   missingTerms?: string[];
+  sourceMatches?: boolean;
+  hasContentEnvelope?: boolean;
   failure?: string;
   /** Deliverable for the caller, omitted from metrics and append-only task logs. */
   contentText?: string;
@@ -49,7 +53,8 @@ export function validatePublicReadNeed(need: PublicReadNeed): URL {
 
 export async function readPublicDocumentation(need: PublicReadNeed): Promise<PublicReadResult> {
   const target = validatePublicReadNeed(need);
-  const base = { at: new Date().toISOString(), needId: need.id, purpose: need.purpose,
+  const base = { at: new Date().toISOString(), criteriaVersion: "public-document-v2" as const,
+    needId: need.id, purpose: need.purpose,
     targetUrl: target.href, provider: "jina_reader_no_credentials" as const,
     paymentEvidence: "not_observed" as const, newPayments: 0 as const };
   let responseStatus: number | undefined;
@@ -79,10 +84,10 @@ export async function readPublicDocumentation(need: PublicReadNeed): Promise<Pub
     } finally { await reader.cancel().catch(() => undefined); }
     const body = Buffer.concat(chunks);
     const text = new TextDecoder("utf-8", { fatal: true }).decode(body);
-    const missingTerms = need.requiredTerms.filter((term) => !text.toLowerCase().includes(term.toLowerCase()));
-    const pass = size >= need.minBytes && missingTerms.length === 0;
+    const { missingTerms, pass, sourceMatches, hasContentEnvelope } =
+      reviewPublicDocument(text, target.href, need.requiredTerms, need.minBytes);
     return { ...base, status: response.status, bytes: size,
-      bodySha256: createHash("sha256").update(body).digest("hex"), missingTerms,
+      bodySha256: createHash("sha256").update(body).digest("hex"), missingTerms, sourceMatches, hasContentEnvelope,
       contentText: pass ? text : undefined,
       outcome: pass ? "free_delivery_pass" : "held",
       reason: pass ? "free_route_satisfies_need" : "delivery_failed" };

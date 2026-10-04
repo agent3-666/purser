@@ -1,0 +1,16 @@
+{
+  "reviewedAt": "2026-10-04T21:19:07.022Z",
+  "originalFetchedAt": "2026-10-04T19:29:01.416Z",
+  "targetUrl": "https://tameion.thecanteenapp.com/",
+  "bodySha256": "99ed25fc4e3d23cc46faec715e4dce1395ce164ef2ce1471237cce68348674d1",
+  "scope": "historical_document_revalidation_no_network",
+  "criteriaVersion": "public-document-v2",
+  "bytes": 39400,
+  "sourceMatches": true,
+  "hasContentEnvelope": true,
+  "missingTerms": [],
+  "pass": true,
+  "newNetworkRequests": 0,
+  "newPayments": 0,
+  "verifiedExternalUsers": 0
+}
