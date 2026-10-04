@@ -1,0 +1,56 @@
+{
+  "scope": "team_internal_documentation_task_not_external_adoption",
+  "taskId": "purser_submission_requirements_20261004",
+  "attempts": [
+    {
+      "at": "2026-10-04T19:26:52.964Z",
+      "needId": "purser_submission_requirements_20261004",
+      "purpose": "Check the current judging requirements before updating Purser submission evidence",
+      "targetUrl": "https://tameion.thecanteenapp.com/",
+      "provider": "jina_reader_no_credentials",
+      "paymentEvidence": "not_observed",
+      "newPayments": 0,
+      "status": 200,
+      "bytes": 39400,
+      "bodySha256": "99ed25fc4e3d23cc46faec715e4dce1395ce164ef2ce1471237cce68348674d1",
+      "missingTerms": [],
+      "outcome": "free_delivery_pass",
+      "reason": "free_route_satisfies_need"
+    },
+    {
+      "at": "2026-10-04T19:28:22.133Z",
+      "needId": "purser_submission_requirements_20261004",
+      "purpose": "Check the current judging requirements before updating Purser submission evidence",
+      "targetUrl": "https://tameion.thecanteenapp.com/",
+      "provider": "jina_reader_no_credentials",
+      "paymentEvidence": "not_observed",
+      "newPayments": 0,
+      "outcome": "held",
+      "reason": "delivery_failed",
+      "failure": "reader_request_or_validation_failed"
+    },
+    {
+      "at": "2026-10-04T19:29:01.416Z",
+      "needId": "purser_submission_requirements_20261004",
+      "purpose": "Check the current judging requirements before updating Purser submission evidence",
+      "targetUrl": "https://tameion.thecanteenapp.com/",
+      "provider": "jina_reader_no_credentials",
+      "paymentEvidence": "not_observed",
+      "newPayments": 0,
+      "status": 200,
+      "bytes": 39400,
+      "bodySha256": "99ed25fc4e3d23cc46faec715e4dce1395ce164ef2ce1471237cce68348674d1",
+      "missingTerms": [],
+      "outcome": "free_delivery_pass",
+      "reason": "free_route_satisfies_need"
+    }
+  ],
+  "attemptCount": 3,
+  "passedAttempts": 2,
+  "heldAttempts": 1,
+  "deliveredDocuments": 1,
+  "newPayments": 0,
+  "verifiedExternalUsers": 0,
+  "validationScope": "size_and_required_terms_only_not_semantic_accuracy",
+  "productionIntegration": false
+}

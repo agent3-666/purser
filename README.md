@@ -92,3 +92,9 @@ MIT. See [LICENSE](LICENSE). Third-party packages retain their own licenses.
 ## Public history
 
 This repository preserves the development sequence and the `tameion-start` baseline while removing raw research snapshots from every published commit. Commit identifiers changed during that removal; source chronology and the event-period code delta remain visible. Raw snapshots, local wallet state and signed payment payloads are not published.
+
+## Credential-free public documentation workflow
+
+`npm run read:business-docs` reads the current official Tameion requirements using the same Jina Reader request format as the existing product webpage-reading route. The task saves a document and timestamped validation report in ignored local `state/business-documentation/`. It supplies no API key or wallet and never retries a 402 with payment. Required-term and byte-size checks are structural checks, not independent proof of accuracy or semantic quality.
+
+This is a local team documentation task, not a deployed production integration, an Arc payment, a live-model procurement decision, or external business adoption. The original paid testnet trial is counted separately. Run `npm run experiments:public-web-read` for URL, delivery and no-payment guards.
