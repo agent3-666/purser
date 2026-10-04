@@ -68,6 +68,7 @@ const inputs = Object.keys(built.metafile.inputs);
 assert.ok(inputs.some((path) => path.endsWith("src/payee-auth/verify.ts")));
 assert.ok(inputs.some((path) => path.endsWith("src/purchasing/recommend.ts")));
 assert.ok(inputs.some((path) => path.endsWith("src/delivery/arc-block.ts")));
+assert.ok(inputs.some((path) => path.endsWith("src/purchasing/read-retry.ts")));
 const bundle = readFileSync(new URL("bundle.js", dir), "utf8");
 for (const forbidden of ["/Users/", "node:fs", "node:crypto", "Payment-Signature"]) {
   assert.ok(!bundle.includes(forbidden), `static demo bundle must not contain ${forbidden}`);

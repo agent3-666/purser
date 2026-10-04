@@ -80,6 +80,14 @@
     <div class="choices"><button id="check-delivery">Check this response</button></div>
     <p id="delivery-status" role="status">Loading delivery checks…</p><pre id="delivery-trace"></pre>
   </section>
+  <section class="card trace" aria-label="Reader retry controls">
+    <h2>Retry once, with a visible limit</h2>
+    <p class="muted">The anonymous Reader workflow allows at most two attempts within 25 seconds. Transient failures may retry; payment requests, permission failures and invalid documents stop. Every completed attempt is saved before any retry.</p>
+    <p class="muted">These buttons exercise the real retry policy on synthetic inputs. They make no network request. To retry an actual local task, run the documented business-reader command again; each run has the same bounds and a new log.</p>
+    <div class="choices"><button data-reader-case="timeout">Timeout: inspect the bounded retry</button><button data-reader-case="limited">429 with a 60-second wait: inspect the stop</button><button data-reader-case="payment">402 requires payment: inspect the stop</button></div>
+    <p id="reader-retry-status" role="status">Choose a scenario to inspect the policy.</p><pre id="reader-retry-trace">No network request has been made.</pre>
+    <p class="muted"><a style="color:#d4e85a" href="https://github.com/agent3-666/purser#reader-reliability-and-manual-retry">Read the local retry entry point and failure meanings</a></p>
+  </section>
   <footer>The authorization verifier decides whether the payout address was authorized by the seller’s published identity. “Confirmed” does not prove service quality or business identity. The model can propose only after deterministic eligibility checks; neither it nor this page can authorize a payment.</footer>
 </main>
 <script src="./bundle.js" type="module"></script>

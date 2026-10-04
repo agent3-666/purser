@@ -1,6 +1,7 @@
 /** Runs the real verifier and proposal boundary in the browser; deliberately contains no payment code. */
 import { evaluateDemoScenario, type DemoFixture } from "./scenario.js";
 import { verifyArcBlockHeight } from "../delivery/arc-block.js";
+import { decideReadRetry } from "../purchasing/read-retry.js";
 const element = (id: string) => {
   const found = document.getElementById(id);
   if (!found) throw new Error(`missing demo element ${id}`);
@@ -57,3 +58,14 @@ for (const button of document.querySelectorAll<HTMLButtonElement>("[data-deliver
 element("check-delivery").addEventListener("click", runDelivery);
 deliveryInput.value = JSON.stringify({ jsonrpc: "2.0", id: 1, result: "0x64" }, null, 2);
 runDelivery();
+
+for (const button of document.querySelectorAll<HTMLButtonElement>("[data-reader-case]")) {
+  button.addEventListener("click", () => {
+    const kind = button.dataset.readerCase;
+    const input = { retryable: kind === "timeout" || kind === "limited", attempt: 1, remainingMs: 13_000,
+      retryAfterMs: kind === "limited" ? 60_000 : undefined };
+    const result = decideReadRetry(input);
+    element("reader-retry-status").textContent = result.retry ? "One bounded retry may be scheduled; the failed attempt remains in the log." : `Stop: ${result.stopReason}. No payment or hidden fallback.`;
+    element("reader-retry-trace").textContent = JSON.stringify({ syntheticScenario: kind, input, result }, null, 2);
+  });
+}

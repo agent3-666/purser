@@ -1,0 +1,49 @@
+{
+  "scope": "single_necessary_live_read_no_external_adoption",
+  "policy": {
+    "maxAttempts": 2,
+    "attemptTimeoutMs": 12000,
+    "totalTimeoutMs": 25000,
+    "maxRetryAfterMs": 2000
+  },
+  "run": {
+    "at": "2026-10-04T22:20:01.510Z",
+    "criteriaVersion": "public-document-v3",
+    "needId": "purser_submission_requirements_20261004",
+    "purpose": "Check the current judging requirements before updating Purser submission evidence",
+    "targetUrl": "https://tameion.thecanteenapp.com/",
+    "provider": "jina_reader_no_credentials",
+    "paymentEvidence": "not_observed",
+    "newPayments": 0,
+    "status": 200,
+    "bytes": 39353,
+    "bodySha256": "fe37707f4c1c8fd16fa41d9249a95b2e4d7284ff220be1d4a906cb9aa04d0a95",
+    "missingTerms": [],
+    "sourceMatches": true,
+    "hasContentEnvelope": true,
+    "outcome": "free_delivery_pass",
+    "reason": "free_route_satisfies_need",
+    "attempts": [
+      {
+        "number": 1,
+        "startedAt": "2026-10-04T22:20:01.510Z",
+        "elapsedMs": 3332,
+        "status": 200,
+        "outcome": "free_delivery_pass",
+        "retryable": false,
+        "retryScheduled": false,
+        "retryDelayMs": 0
+      }
+    ],
+    "stopReason": "success",
+    "nextAction": "use_checked_document"
+  },
+  "checkpointJournalMatched": true,
+  "savedDocumentDigestMatched": true,
+  "mockRetryScenariosPassed": 20,
+  "previousFailuresPreservedIn": "public-web-read-20261004.json",
+  "paidFallback": false,
+  "verifiedExternalUsers": 0,
+  "originCacheFreshnessIndependentlyVerified": false,
+  "checkpointFailureStopsFurtherRequestsVerified": true
+}

@@ -30,7 +30,7 @@ try {
       assert.equal(headers.has("x-payment"), false);
       return new Response(body, { status, headers: { "content-type": type } });
     };
-    const result = await readPublicDocumentation(need);
+    const result = await readPublicDocumentation(need, { maxAttempts: 1 });
     assert.equal(result.outcome, outcome);
     assert.equal(result.newPayments, 0);
     assert.equal(calls, 1, "no silent retry or paid fallback");

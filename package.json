@@ -15,11 +15,12 @@
     "preflight:gateway": "tsx scripts/gateway-readiness.ts",
     "build:demo": "tsx scripts/build-demo.ts",
     "verify:settlement": "tsx scripts/verify-settlement.ts",
-    "experiments": "tsx experiments/payee-authorization.ts && tsx experiments/executor.ts && tsx experiments/delivery.ts && tsx experiments/purchasing.ts && tsx experiments/x402-quote.ts && tsx experiments/gateway-buyer.ts && tsx experiments/arc-block.ts && tsx experiments/public-web-read.ts",
+    "experiments": "tsx experiments/payee-authorization.ts && tsx experiments/executor.ts && tsx experiments/delivery.ts && tsx experiments/purchasing.ts && tsx experiments/x402-quote.ts && tsx experiments/gateway-buyer.ts && tsx experiments/arc-block.ts && tsx experiments/public-web-read.ts && tsx experiments/read-retry.ts",
     "mutation": "tsx scripts/mutation-check.ts",
     "experiments:public-web-read": "tsx experiments/public-web-read.ts",
     "read:business-docs": "tsx scripts/read-business-documentation.ts",
-    "review:saved-docs": "tsx scripts/review-saved-document.ts"
+    "review:saved-docs": "tsx scripts/review-saved-document.ts",
+    "experiments:read-retry": "tsx experiments/read-retry.ts"
   },
   "engines": {
     "node": ">=20.18"
