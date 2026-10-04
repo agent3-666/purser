@@ -18,7 +18,10 @@ export function verifyArcBlockHeight(paidBody: Uint8Array, referenceHeightHex: s
   let parsed: unknown;
   try { parsed = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(paidBody)); }
   catch { parsed = null; }
-  const paid = parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parseHeight((parsed as Record<string, unknown>).result) : null;
+  const record = parsed && typeof parsed === "object" && !Array.isArray(parsed)
+    ? parsed as Record<string, unknown> : null;
+  const paid = record && record.jsonrpc === "2.0" && !Object.hasOwn(record, "error")
+    ? parseHeight(record.result) : null;
   if (paid === null) return { outcome: "fail", paidHeight: null, referenceHeight: referenceHeightHex,
     difference: null, reason: "invalid_paid_response" };
   const difference = reference - paid;
@@ -34,7 +37,8 @@ export async function fetchIndependentArcHeight(rpcUrl = "https://rpc.testnet.ar
     body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_blockNumber", params: [] }),
     signal: AbortSignal.timeout(10_000) });
   if (!response.ok) throw new Error(`independent Arc RPC returned HTTP ${response.status}`);
-  const value = (await response.json()) as { result?: unknown };
-  if (parseHeight(value.result) === null) throw new Error("independent Arc RPC returned no block height");
+  const value = (await response.json()) as { jsonrpc?: unknown; id?: unknown; result?: unknown; error?: unknown };
+  if (!value || value.jsonrpc !== "2.0" || value.id !== 1 || Object.hasOwn(value, "error") ||
+      parseHeight(value.result) === null) throw new Error("independent Arc RPC returned no valid block height");
   return value.result as string;
 }

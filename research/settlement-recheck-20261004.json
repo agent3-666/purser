@@ -1,0 +1,21 @@
+{
+  "verifiedAt": "2026-10-04T18:07:58.998Z",
+  "chainId": 5042002,
+  "scope": "historical_single_testnet_purchase_recheck",
+  "newPurchases": 0,
+  "externalUsersVerified": 0,
+  "transferId": "fe8230bb-4618-48c9-9898-43ca041043f1",
+  "circleStatus": "completed",
+  "transactionHash": "0x333a1462e1be41002bc569ebf98ac68d2eb6fa8caf521d72962be6e1025b22db",
+  "blockNumber": "64805221",
+  "receiptStatus": "success",
+  "gateway": "0x0077777d7EBA4688BDeF3E311b846F25870A19B9",
+  "domain": 26,
+  "token": "0x3600000000000000000000000000000000000000",
+  "batchId": "0x805f6c0c63ea29a3a4839361916d60c1d5aae2a04515e1ce2c1bc07f42f0d75d",
+  "entryCount": 4,
+  "buyer": "0xC1fF46183e6f92642b8Bb3fA3fc73b32B22AFdED",
+  "buyerDeltaAtomic": "-100",
+  "payee": "0xF46394adDdA95A3d5bCC1124605E3d15D204623C",
+  "payeeDeltaAtomic": "100"
+}
